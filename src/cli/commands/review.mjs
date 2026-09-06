@@ -57,22 +57,46 @@ async function resolveBaseRepoDiff(parsed) {
 }
 
 /**
- * Input names the artifact itself says were supplied, for the Flow runner's
- * `when: { input, state }` checks (Epic #2011 AC7 P2). The artifact records
- * the resolved artifact set only under `--debug` (`debug.resolvedArtifacts`,
- * review-plan.mjs); without it nothing in the artifact names the inputs, so
- * the list is empty and the runner sees every optional input as absent. Sorted
- * so the same artifact always yields the same list.
+ * Flow inputs the artifact itself proves were supplied, keyed by Flow input
+ * name, for `executeFlow`'s required-input check and `when` clauses (Epic
+ * #2011 AC7 P2). Two sources, both already in the artifact:
+ *
+ *   - `context.changedFiles` exists only when the review diff resolved
+ *     (review-plan.mjs sets `context` under `diffResolved`), so it stands for
+ *     the Flow input `diff`.
+ *   - `debug.resolvedArtifacts` (present under `--debug` only) lists every
+ *     artifact ID with an `exists` flag. Only IDs that ARE a Flow input name
+ *     (`plan`, `diff`) are taken; no ID-to-input mapping is invented here —
+ *     `todo` is not claimed as `tasks`, `pbi-input` not as `requirements`.
+ *
+ * Everything else is absent, so a Flow whose required inputs the artifact
+ * cannot vouch for stops before its first step (`steps: []`); that is the
+ * honest record, not a defect. Wiring the resolver's full input set is the
+ * capability phase's job.
  *
  * @param {Record<string, unknown>} artifact
- * @returns {string[]}
+ * @param {object} document - the resolved Flow document (`inputs[]` names).
+ * @returns {Record<string, unknown>}
  */
-function resolvedFlowInputs(artifact) {
+function resolvedFlowInputs(artifact, document) {
+  const names = new Set(
+    (Array.isArray(document?.inputs) ? document.inputs : [])
+      .map((input) => input?.name)
+      .filter((name) => typeof name === 'string')
+  );
+  const inputs = {};
+  if (names.has('diff') && Array.isArray(artifact?.context?.changedFiles)) {
+    inputs.diff = artifact.context.changedFiles;
+  }
   const resolved = artifact?.debug?.resolvedArtifacts;
-  if (!resolved || typeof resolved !== 'object') return [];
-  return Object.keys(resolved)
-    .filter((id) => resolved[id]?.exists === true)
-    .sort();
+  if (resolved && typeof resolved === 'object') {
+    for (const id of Object.keys(resolved).sort()) {
+      if (names.has(id) && resolved[id]?.exists === true && resolved[id]?.path) {
+        inputs[id] = resolved[id].path;
+      }
+    }
+  }
+  return inputs;
 }
 
 /**
@@ -255,17 +279,19 @@ export async function runReviewCommand(parsed) {
     // run the pinned Flow document through the single Flow runner and append
     // the per-step outcomes as `steps`, additively, right after the pin.
     // `capabilities` is empty in this slice, so every step lands on
-    // `not-implemented` / `skipped` / `stopped`; nothing here reads the
-    // runner's `stopped` back into `gate` / `decision` (RA-1) — both were
-    // finalized above and stay byte-identical to the run without `--entry`.
-    // `review plan --entry` and `exec --dry-run` / `exec --plan` keep the pin
-    // only: they run no review, so there is nothing for a step to record.
+    // `not-implemented` / `skipped` / `stopped`, and a Flow whose required
+    // inputs the artifact cannot vouch for (see `resolvedFlowInputs`) records
+    // `steps: []`. Nothing here reads the runner's `stopped` / `stopReason`
+    // back into `gate` / `decision` (RA-1) — both were finalized above and
+    // stay byte-identical to the run without `--entry`. `review plan --entry`
+    // and `exec --dry-run` / `exec --plan` keep the pin only: they run no
+    // review, so there is nothing for a step to record.
     if (resolvedFlow !== null && isExecExecute) {
       const { executeFlow } = await import('../../lib/flow-runner.mjs');
-      const result = executeFlow({
+      const result = await executeFlow({
         document: resolvedFlow.document,
         capabilities: {},
-        inputs: resolvedFlowInputs(artifact),
+        inputs: resolvedFlowInputs(artifact, resolvedFlow.document),
       });
       artifact.steps = result.steps;
     }

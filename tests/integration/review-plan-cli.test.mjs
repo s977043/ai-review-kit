@@ -98,7 +98,17 @@ describe('river review plan --plan-only — CLI E2E (#802 Phase 3)', () => {
     const dir = setupRepo(t);
     const out = join(dir, 'exec-entry.json');
     const result = await runCliInProcess(
-      ['review', 'exec', '--phase', 'upstream', '--entry', 'review-plan', '--output-file', out],
+      [
+        'review',
+        'exec',
+        '--phase',
+        'upstream',
+        '--entry',
+        'review-plan',
+        '--debug',
+        '--output-file',
+        out,
+      ],
       { cwd: dir, env: { RIVER_OFFLINE: '1', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '' } }
     );
     assert.equal(result.code, 0, result.stderr);

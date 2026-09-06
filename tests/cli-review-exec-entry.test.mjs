@@ -5,18 +5,26 @@
 // What is pinned:
 //
 //   1. `review exec --entry` runs the pinned Flow through
-//      src/lib/flow-runner.mjs (P1) and appends `steps`, one entry per Flow
-//      step, in document order, with an outcome drawn from the closed set the
-//      artifact schema declares. Measured on the 4 core entries.
-//   2. Record only (RA-1): `gate`, `decision`, `findings`, `plan` and
-//      `suggestedLoopSignal` are byte-identical to the run WITHOUT `--entry`
-//      on the same inputs. The runner's `stopped` never reaches the gate.
-//   3. Additive: without `--entry` the key set is what it was; with it the
+//      src/lib/flow-runner.mjs (P1) and appends `steps`: the runner's step
+//      records, verbatim, in document order, each outcome drawn from the
+//      closed set the artifact schema declares. Measured on the 4 core
+//      entries against a HAND-WRITTEN table (below), not against the runner,
+//      so the test is not self-consistent with the code under test.
+//   2. The inputs handed to the runner are only what the artifact itself
+//      proves: `diff` from `context.changedFiles`, and under `--debug` the
+//      same-named resolved artifacts (`plan`). A Flow whose required inputs
+//      the artifact cannot vouch for therefore stops BEFORE its first step and
+//      records `steps: []` — pinned per entry so the derivation cannot widen
+//      silently into claiming inputs that were never supplied.
+//   3. Record only (RA-1): `gate`, `decision`, `findings`, `plan` and
+//      `suggestedLoopSignal` are identical to the run WITHOUT `--entry` on the
+//      same inputs. The runner's `stopped` never reaches the gate.
+//   4. Additive: without `--entry` the key set is what it was; with it the
 //      keys are `…, flow, evidenceRequirements, steps` followed by the
 //      trailing `executionManifest` (#2054 PR-4 pins that one last).
-//   4. `review plan --entry` and `review exec --dry-run --entry` attach the
+//   5. `review plan --entry` and `review exec --dry-run --entry` attach the
 //      pin only: no `steps`, because no review ran.
-//   5. The emitted artifact validates against schemas/review-artifact.schema.json.
+//   6. The emitted artifact validates against schemas/review-artifact.schema.json.
 //
 // Output capture: as in tests/cli-review-plan-entry.test.mjs the artifact is
 // read back from --output-file (runCliInProcess does not capture stdout).
@@ -41,7 +49,24 @@ const OUTCOMES = new Set(SCHEMA.properties.steps.items.properties.outcome.enum);
 const KINDS = new Set(SCHEMA.properties.steps.items.properties.kind.enum);
 const validate = compileReviewArtifactValidator();
 
-const CORE_ENTRIES = ['review-plan', 'review-replan', 'review-task', 'review-final'];
+// The fixture repo supplies plan.md, todo.md and diff.patch. What the artifact
+// can vouch for as Flow inputs: `diff` always (context.changedFiles), `plan`
+// under --debug only (debug.resolvedArtifacts.plan.exists). `todo` is NOT
+// claimed as `tasks`, nothing is claimed as `requirements` / `baseline`.
+//
+// `records` = number of step records expected with --debug; 0 means the
+// runner stopped before step 0 because a required input was missing.
+const CORE_ENTRIES = [
+  { entry: 'review-plan', required: ['plan'], recordsWithDebug: 11, recordsPlain: 0 },
+  { entry: 'review-replan', required: ['baseline', 'plan'], recordsWithDebug: 0, recordsPlain: 0 },
+  { entry: 'review-task', required: ['diff', 'tasks'], recordsWithDebug: 0, recordsPlain: 0 },
+  {
+    entry: 'review-final',
+    required: ['diff', 'requirements'],
+    recordsWithDebug: 0,
+    recordsPlain: 0,
+  },
+];
 const ENV = { RIVER_OFFLINE: '1', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', NO_COLOR: '1' };
 
 function setupRepo(t) {
@@ -67,38 +92,84 @@ async function run(dir, argv) {
 /** Drop the manifest (#2054 PR-4): it pins the flow, so it differs by design. */
 const withoutManifest = ({ executionManifest, ...rest }) => rest;
 
-describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
-  for (const entry of CORE_ENTRIES) {
-    test(`${entry}: one step record per Flow step, closed outcome set, schema-valid, gate untouched`, async (t) => {
-      const dir = setupRepo(t);
-      const without = await run(dir, ['exec']);
-      const withEntry = await run(dir, ['exec', '--entry', entry]);
-      assert.equal(validate(withEntry), true, JSON.stringify(validate.errors));
+function assertStepRecords(artifact, entry, expectedCount) {
+  const { document } = resolveFlowEntry(entry);
+  assert.ok(Array.isArray(artifact.steps), 'steps must be an array');
+  assert.equal(artifact.steps.length, expectedCount, `${entry}: step record count`);
+  if (expectedCount > 0) assert.equal(expectedCount, document.steps.length);
+  artifact.steps.forEach((step, i) => {
+    assert.equal(step.index, i);
+    assert.equal(step.id, document.steps[i].use ?? document.steps[i].reviewer);
+    assert.equal(step.kind, 'use' in document.steps[i] ? 'primitive' : 'reviewer');
+    assert.ok(KINDS.has(step.kind), `unknown kind ${step.kind}`);
+    assert.ok(OUTCOMES.has(step.outcome), `unknown outcome ${step.outcome}`);
+  });
+  // P2 wires no capability: nothing may claim to have executed.
+  assert.equal(
+    artifact.steps.some((s) => s.outcome === 'executed'),
+    false,
+    'no capability is wired in P2, so no step can be executed'
+  );
+}
 
-      const { document } = resolveFlowEntry(entry);
-      assert.ok(Array.isArray(withEntry.steps));
-      assert.equal(withEntry.steps.length, document.steps.length);
-      withEntry.steps.forEach((step, i) => {
-        assert.equal(step.index, i);
-        assert.equal(step.id, document.steps[i].use ?? document.steps[i].reviewer);
-        assert.ok(KINDS.has(step.kind), `unknown kind ${step.kind}`);
-        assert.ok(OUTCOMES.has(step.outcome), `unknown outcome ${step.outcome}`);
-      });
-      // P2 wires no capability: nothing may claim to have executed.
-      assert.equal(
-        withEntry.steps.some((s) => s.outcome === 'executed'),
-        false,
-        'no capability is wired in P2, so no step can be executed'
-      );
+describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
+  for (const { entry, required, recordsWithDebug, recordsPlain } of CORE_ENTRIES) {
+    test(`${entry}: schema-valid, step records per the expectation table, gate untouched`, async (t) => {
+      const dir = setupRepo(t);
+      // The table's `required` column is what the Flow declares; pin it so a
+      // Flow edit that changes required inputs surfaces here, not as a silent
+      // change of the expected record count.
+      assert.deepEqual(resolveFlowEntry(entry).evidenceRequirements, required);
+
+      const without = await run(dir, ['exec']);
+      const plain = await run(dir, ['exec', '--entry', entry]);
+      const debug = await run(dir, ['exec', '--entry', entry, '--debug']);
+      assert.equal(validate(plain), true, JSON.stringify(validate.errors));
+      assert.equal(validate(debug), true, JSON.stringify(validate.errors));
+
+      assertStepRecords(plain, entry, recordsPlain);
+      assertStepRecords(debug, entry, recordsWithDebug);
 
       // RA-1: the runner's result does not feed the judgment.
-      assert.deepEqual(withEntry.gate, without.gate);
-      assert.equal(withEntry.decision, without.decision);
-      assert.deepEqual(withEntry.findings, without.findings);
-      assert.deepEqual(withEntry.plan, without.plan);
-      assert.equal(withEntry.suggestedLoopSignal, without.suggestedLoopSignal);
+      assert.deepEqual(plain.gate, without.gate);
+      assert.equal(plain.decision, without.decision);
+      assert.deepEqual(plain.findings, without.findings);
+      assert.deepEqual(plain.plan, without.plan);
+      assert.equal(plain.suggestedLoopSignal, without.suggestedLoopSignal);
     });
   }
+
+  test('review-plan --debug: every record is not-implemented or skipped, in document order', async (t) => {
+    const dir = setupRepo(t);
+    const artifact = await run(dir, ['exec', '--entry', 'review-plan', '--debug']);
+    const outcomes = artifact.steps.map((s) => s.outcome);
+    // plan-review.flow.json: 11 steps; the `when: design present` step is
+    // skipped (design is not an artifact the fixture supplies), the rest have
+    // no capability. derive-gate is a reserved primitive (also not-implemented).
+    assert.deepEqual(outcomes, [
+      'not-implemented',
+      'not-implemented',
+      'not-implemented',
+      'not-implemented',
+      'not-implemented',
+      'skipped',
+      'not-implemented',
+      'not-implemented',
+      'not-implemented',
+      'not-implemented',
+      'not-implemented',
+    ]);
+    assert.equal(artifact.steps[5].id, 'cross-artifact-review');
+    assert.match(artifact.steps[5].reason, /design/);
+    // Parallel run tagging survives the copy: the two reviewer steps share run 0.
+    assert.deepEqual(
+      artifact.steps.filter((s) => s.parallel).map((s) => [s.id, s.parallelRun]),
+      [
+        ['security-scanner', 0],
+        ['test-gap', 0],
+      ]
+    );
+  });
 
   test('additive: keys are the base keys, then flow / evidenceRequirements / steps, then the manifest', async (t) => {
     const dir = setupRepo(t);
@@ -126,12 +197,16 @@ describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
     assert.equal('steps' in dry, false);
   });
 
-  test('the schema rejects a step with an unknown outcome or an extra key', async (t) => {
+  test('the schema rejects a step with an unknown outcome, an unknown kind, or an extra key', async (t) => {
     const dir = setupRepo(t);
-    const artifact = await run(dir, ['exec', '--entry', 'review-task']);
+    const artifact = await run(dir, ['exec', '--entry', 'review-plan', '--debug']);
+    assert.ok(artifact.steps.length > 0);
     const badOutcome = structuredClone(artifact);
     badOutcome.steps[0].outcome = 'nope';
     assert.equal(validate(badOutcome), false);
+    const badKind = structuredClone(artifact);
+    badKind.steps[0].kind = 'use';
+    assert.equal(validate(badKind), false);
     const extraKey = structuredClone(artifact);
     extraKey.steps[0].verdict = 'GO';
     assert.equal(validate(extraKey), false);

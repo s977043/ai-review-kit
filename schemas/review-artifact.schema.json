@@ -336,20 +336,25 @@
     },
     "steps": {
       "type": "array",
-      "description": "Per-step outcomes of running the pinned Flow through src/lib/flow-runner.mjs (Epic #2011 AC7 P2, Beta). Additive and optional: present only on `river review exec --entry <name>`, in the Flow document's step order (`index` is the position in `flow.steps`). Record only: no capability is wired in this slice, so outcomes are `not-implemented` / `skipped` / `stopped`, and nothing in `gate` / `decision` / `findings` is derived from this array (RA-1).",
+      "description": "Per-step records of running the pinned Flow through src/lib/flow-runner.mjs (Epic #2011 AC7 P2, Beta): the runner's StepOutcome shape, verbatim. Additive and optional: present only on `river review exec --entry <name>`, in the Flow document's step order (`index` is the position in the document's `steps`). Empty when the runner stopped before the first step because a required input was not provable from the artifact. Record only: no capability is wired in this slice, so outcomes are `not-implemented` / `skipped` / `stopped`, and nothing in `gate` / `decision` / `findings` is derived from this array (RA-1). `outcome` and `kind` are the runner's closed sets (STEP_OUTCOMES in flow-runner.mjs).",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["index", "id", "kind", "outcome"],
+        "required": ["index", "id", "kind", "parallel", "parallelRun", "outcome"],
         "properties": {
           "index": { "type": "integer", "minimum": 0 },
           "id": { "type": "string", "minLength": 1 },
-          "kind": { "type": "string", "enum": ["use", "reviewer"] },
+          "kind": { "type": "string", "enum": ["primitive", "reviewer"] },
+          "parallel": { "type": "boolean" },
+          "parallelRun": { "type": ["integer", "null"], "minimum": 0 },
           "outcome": {
             "type": "string",
             "enum": ["executed", "skipped", "degraded", "stopped", "not-implemented"]
           },
-          "reason": { "type": "string", "minLength": 1 }
+          "reason": { "type": "string", "minLength": 1 },
+          "result": {
+            "description": "Whatever the capability returned for an `executed` step. Never present in P2 (no capability is wired)."
+          }
         }
       }
     },
