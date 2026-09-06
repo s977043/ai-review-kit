@@ -72,6 +72,9 @@ OUT_FILE="$OUT_DIR/$(date -u +%Y%m%dT%H%M%SZ)-$$.json"
 # logs. This is the only deletion this hook performs, and only inside its own
 # temp dir.
 KEEP="${RIVER_TASK_CHECKPOINT_KEEP:-20}"
+# Fail-soft (#2119): a non-numeric KEEP (`abc`, `1.5`, `-1`) would make the
+# arithmetic below abort under `set -u`; fall back to the default instead.
+case "$KEEP" in ''|*[!0-9]*) KEEP=20;; esac
 # Portable (BSD head has no `-n -N`): count, then drop the oldest `count - KEEP`.
 total=$(find "$OUT_DIR" -maxdepth 1 -name '*.json' | wc -l | tr -d ' ')
 drop=$((total - KEEP))
