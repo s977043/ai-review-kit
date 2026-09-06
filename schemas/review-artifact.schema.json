@@ -334,6 +334,25 @@
       "items": { "type": "string", "minLength": 1 },
       "description": "Input names the pinned Flow declares as `required: true` (#2054 PR-3, Beta). Additive and optional; emitted together with `flow`. A declaration of what the Flow needs, not a record of what was supplied."
     },
+    "steps": {
+      "type": "array",
+      "description": "Per-step outcomes of running the pinned Flow through src/lib/flow-runner.mjs (Epic #2011 AC7 P2, Beta). Additive and optional: present only on `river review exec --entry <name>`, in the Flow document's step order (`index` is the position in `flow.steps`). Record only: no capability is wired in this slice, so outcomes are `not-implemented` / `skipped` / `stopped`, and nothing in `gate` / `decision` / `findings` is derived from this array (RA-1).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["index", "id", "kind", "outcome"],
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "enum": ["use", "reviewer"] },
+          "outcome": {
+            "type": "string",
+            "enum": ["executed", "skipped", "degraded", "stopped", "not-implemented"]
+          },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "debug": {
       "type": "object",
       "additionalProperties": true,

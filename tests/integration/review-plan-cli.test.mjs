@@ -94,6 +94,23 @@ describe('river review plan --plan-only — CLI E2E (#802 Phase 3)', () => {
     assert.equal(validate(broken), false);
   });
 
+  test('review exec --entry <name> keeps the artifact schema-valid with the appended steps (#2011 AC7 P2)', async (t) => {
+    const dir = setupRepo(t);
+    const out = join(dir, 'exec-entry.json');
+    const result = await runCliInProcess(
+      ['review', 'exec', '--phase', 'upstream', '--entry', 'review-plan', '--output-file', out],
+      { cwd: dir, env: { RIVER_OFFLINE: '1', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '' } }
+    );
+    assert.equal(result.code, 0, result.stderr);
+    const artifact = JSON.parse(readFileSync(out, 'utf8'));
+    assert.equal(validate(artifact), true, JSON.stringify(validate.errors));
+    assert.ok(Array.isArray(artifact.steps) && artifact.steps.length > 0);
+    // The schema must actually know `steps`: an unknown outcome is rejected.
+    const broken = structuredClone(artifact);
+    broken.steps[0].outcome = 'not-an-outcome';
+    assert.equal(validate(broken), false);
+  });
+
   test('--debug attaches resolvedArtifacts with cwd-default resolution', async (t) => {
     const dir = setupRepo(t);
     const out = join(dir, 'a.json');

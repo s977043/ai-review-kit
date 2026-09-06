@@ -63,7 +63,7 @@ Current stability level for each surface.
 - `--context <list>`: Available contexts (e.g., `diff,fullFile`)
 - `--dependency <list>`: Available dependencies (e.g., `code_search,test_runner`)
 - `--base <ref>`: Branch / ref the diff is taken against (`run`, `skills`, and `review plan|exec|route` share one resolution path, and a surface that reads no diff does not accept the flag at all; which surfaces accept it, how the value is validated, and the exit code of the resulting usage error are all outside the Stable Contract — the [Runner CLI reference](./runner-cli-reference.en.md) is the SSoT)
-- `--entry <name>` (Beta): accepted by `review plan` only; appends the review Flow pin (`flow`) and its required inputs (`evidenceRequirements`) to the emitted artifact. The flag and both fields are outside the Stable Contract — the [Runner CLI reference](./runner-cli-reference.en.md#entry-acceptance-scope) is the SSoT
+- `--entry <name>` (Beta): accepted by `review plan` and `review exec`; appends the review Flow pin (`flow`) and its required inputs (`evidenceRequirements`) to the emitted artifact, and on `review exec` also the per-step outcomes of running that Flow (`steps`, record only in Epic #2011 AC7 P2). The flag and the three fields are outside the Stable Contract — the [Runner CLI reference](./runner-cli-reference.en.md#entry-acceptance-scope) is the SSoT
 
 ### Exit Codes
 

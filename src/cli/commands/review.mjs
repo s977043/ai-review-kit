@@ -57,6 +57,25 @@ async function resolveBaseRepoDiff(parsed) {
 }
 
 /**
+ * Input names the artifact itself says were supplied, for the Flow runner's
+ * `when: { input, state }` checks (Epic #2011 AC7 P2). The artifact records
+ * the resolved artifact set only under `--debug` (`debug.resolvedArtifacts`,
+ * review-plan.mjs); without it nothing in the artifact names the inputs, so
+ * the list is empty and the runner sees every optional input as absent. Sorted
+ * so the same artifact always yields the same list.
+ *
+ * @param {Record<string, unknown>} artifact
+ * @returns {string[]}
+ */
+function resolvedFlowInputs(artifact) {
+  const resolved = artifact?.debug?.resolvedArtifacts;
+  if (!resolved || typeof resolved !== 'object') return [];
+  return Object.keys(resolved)
+    .filter((id) => resolved[id]?.exists === true)
+    .sort();
+}
+
+/**
  * Handle the `review` command (plan | exec | verify | route).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -231,6 +250,24 @@ export async function runReviewCommand(parsed) {
         }
         throw err;
       }
+    }
+    // Epic #2011 AC7 P2 (Beta, record only): on `review exec --entry <name>`
+    // run the pinned Flow document through the single Flow runner and append
+    // the per-step outcomes as `steps`, additively, right after the pin.
+    // `capabilities` is empty in this slice, so every step lands on
+    // `not-implemented` / `skipped` / `stopped`; nothing here reads the
+    // runner's `stopped` back into `gate` / `decision` (RA-1) — both were
+    // finalized above and stay byte-identical to the run without `--entry`.
+    // `review plan --entry` and `exec --dry-run` / `exec --plan` keep the pin
+    // only: they run no review, so there is nothing for a step to record.
+    if (resolvedFlow !== null && isExecExecute) {
+      const { executeFlow } = await import('../../lib/flow-runner.mjs');
+      const result = executeFlow({
+        document: resolvedFlow.document,
+        capabilities: {},
+        inputs: resolvedFlowInputs(artifact),
+      });
+      artifact.steps = result.steps;
     }
     // #2054 PR-4 (Epic #2011 AC6): pin what this run used as an Execution
     // Manifest, additively, as the LAST top-level key. Built after every
