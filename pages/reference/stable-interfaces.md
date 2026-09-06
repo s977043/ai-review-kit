@@ -138,8 +138,8 @@ usage error の終了コードはレビュー結果を含みません。表す�
 
 - LLM 呼び出しと課金はない（plan-only）
 - 所要は 1〜7 秒（river-review 本体 repo で 3 回実測 5.0〜5.4 秒、別環境で 6.7 秒。大規模 repo では `timeout: 60` を超えて打ち切られうる）
-- 成果物は `$TMPDIR/river-review-task-checkpoint/` に書き、作業ツリーには書かない。直近 20 件（`RIVER_TASK_CHECKPOINT_KEEP`）だけ残して古いものを消す
-- CLI が無い（npm 未導入かつ plugin に `node_modules` が無い）場合と失敗時は exit 0 で skip し、セッションを止めない
+- 成果物は `$TMPDIR/river-review-task-checkpoint/` に書き、作業ツリーには書かない。過去分を 20 件（`RIVER_TASK_CHECKPOINT_KEEP`）まで残して古いものを消す（保持は書き込み前に行うため、実行後は最大 21 件）
+- CLI が無い（npm 未導入かつ plugin に `node_modules` が無い）場合と失敗時は exit 0 で skip し、セッションを止めない。hook は `CLAUDE_PLUGIN_ROOT/node_modules` を要求するため、npm パッケージを導入するか plugin ディレクトリで `npm ci` を実行する
 - 止め方: 環境変数 `RIVER_TASK_CHECKPOINT_HOOK=0`、または `/plugin disable river-review@river-review-marketplace`
 
 ## バージョニング（破壊的変更の扱い）

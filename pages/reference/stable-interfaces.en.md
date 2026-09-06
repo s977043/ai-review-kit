@@ -128,8 +128,8 @@ See `runners/github-action/action.yml` for definition.
 
 - No model call and no cost (plan-only)
 - Takes 1–7 seconds (5.0–5.4 s over 3 runs on the river-review repository itself, 6.7 s on another machine; a large repository may hit the `timeout: 60` cutoff)
-- Writes under `$TMPDIR/river-review-task-checkpoint/`, never into the working tree, keeping the newest 20 artifacts (`RIVER_TASK_CHECKPOINT_KEEP`)
-- Skips with exit 0 when no CLI is available (no npm install and no `node_modules` in the plugin) or when the run fails, so the session is never blocked
+- Writes under `$TMPDIR/river-review-task-checkpoint/`, never into the working tree, keeping up to 20 previous artifacts (`RIVER_TASK_CHECKPOINT_KEEP`); pruning runs before the write, so at most 21 exist after a run
+- Skips with exit 0 when no CLI is available (no npm install and no `node_modules` in the plugin) or when the run fails, so the session is never blocked. The hook requires `CLAUDE_PLUGIN_ROOT/node_modules`: install the npm package, or run `npm ci` in the plugin directory
 - Opt out with the environment variable `RIVER_TASK_CHECKPOINT_HOOK=0`, or `/plugin disable river-review@river-review-marketplace`
 
 ## Versioning (Handling Breaking Changes)
