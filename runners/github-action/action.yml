@@ -171,6 +171,19 @@ runs:
           fi
           cmd=(node "${GITHUB_ACTION_PATH}/dist/index.mjs" review plan "${repo_path}" --plan-only --entry "${INPUT_ENTRY}" --phase "${{ inputs.phase }}" --output "${plan_fmt}")
           output_fmt="${plan_fmt}"
+          # #2119: say so when a `run`-path input was set alongside `entry`,
+          # instead of dropping it silently (same shape as the
+          # deterministic_exec warning above; a notice, since nothing is wrong).
+          ignored=""
+          [ "${{ inputs.gate }}" = "true" ] && ignored="${ignored} gate"
+          [ "${{ inputs.dry_run }}" = "true" ] && ignored="${ignored} dry_run"
+          [ "${{ inputs.estimate }}" = "true" ] && ignored="${ignored} estimate"
+          [ -n "${{ inputs.max_cost }}" ] && ignored="${ignored} max_cost"
+          [ "${{ inputs.comment }}" = "true" ] && ignored="${ignored} comment"
+          [ "${{ inputs.inline_comments }}" = "true" ] && ignored="${ignored} inline_comments"
+          if [ -n "${ignored}" ]; then
+            echo "::notice::entry is set (${INPUT_ENTRY}); these inputs do not apply on the plan-only path and are ignored:${ignored}"
+          fi
         else
           cmd=(node "${GITHUB_ACTION_PATH}/dist/index.mjs" run "${repo_path}" --phase "${{ inputs.phase }}" --planner "${{ inputs.planner }}" --output "${output_fmt}")
         fi
