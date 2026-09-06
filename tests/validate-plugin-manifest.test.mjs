@@ -10,6 +10,7 @@ import {
   checkCrossManifestParity,
   checkAssetRegistration,
   checkManifestHostIndependentRefs,
+  checkPluginHooksScripts,
   checkReviewJudgmentDuplication,
   detectReviewJudgmentDefinitions,
   findSsotReferences,
@@ -947,4 +948,83 @@ test('loadSsotContents: RA1_MAX_TARGET_BYTES を超える SSoT 参照は読ま�
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// --- checkPluginHooksScripts: convention-path hooks/hooks.json (#2117 minor) ---
+// The Claude Code loader reads hooks/hooks.json without a manifest `hooks`
+// field (and reports a manifest entry pointing at it as a duplicate), so the
+// script-existence check must follow the convention path, not the declaration.
+// Fixtures are built in a temp root so nothing here pins the real repository.
+
+function makeHooksFixture({ hooksJson, scripts = [] } = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-hooks-'));
+  if (hooksJson !== undefined) {
+    fs.mkdirSync(path.join(root, 'hooks'));
+    fs.writeFileSync(path.join(root, 'hooks', 'hooks.json'), hooksJson);
+  }
+  for (const rel of scripts) {
+    fs.mkdirSync(path.join(root, path.dirname(rel)), { recursive: true });
+    fs.writeFileSync(path.join(root, rel), '#!/bin/sh\n');
+  }
+  return root;
+}
+
+const HOOKS_JSON_TWO_SCRIPTS = JSON.stringify({
+  hooks: {
+    PostToolUse: [
+      {
+        matcher: 'Write|Edit',
+        hooks: [{ type: 'command', command: 'bash "${CLAUDE_PLUGIN_ROOT}/scripts/a.sh"' }],
+      },
+    ],
+    Stop: [{ hooks: [{ type: 'command', command: 'bash "${CLAUDE_PLUGIN_ROOT}/scripts/b.sh"' }] }],
+  },
+});
+
+test('checkPluginHooksScripts: convention path present, scripts exist → pass (no manifest hooks field)', async () => {
+  const root = makeHooksFixture({
+    hooksJson: HOOKS_JSON_TWO_SCRIPTS,
+    scripts: ['scripts/a.sh', 'scripts/b.sh'],
+  });
+  const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+  assert.deepEqual(errors, []);
+});
+
+test('checkPluginHooksScripts: convention path present, script missing → fail without a manifest hooks field', async () => {
+  const root = makeHooksFixture({ hooksJson: HOOKS_JSON_TWO_SCRIPTS, scripts: ['scripts/a.sh'] });
+  const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+  assert.deepEqual(errors, ['hooks/hooks.json: hook command target does not exist: scripts/b.sh']);
+});
+
+test('checkPluginHooksScripts: no hooks/hooks.json → no-op', async () => {
+  const root = makeHooksFixture({ scripts: ['scripts/a.sh'] });
+  const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+  assert.deepEqual(errors, []);
+});
+
+test('checkPluginHooksScripts: a declared path is checked in addition to the convention path, each file once', async () => {
+  const root = makeHooksFixture({ hooksJson: HOOKS_JSON_TWO_SCRIPTS, scripts: ['scripts/a.sh'] });
+  fs.mkdirSync(path.join(root, 'extra'));
+  fs.writeFileSync(
+    path.join(root, 'extra', 'more.json'),
+    JSON.stringify({
+      hooks: {
+        Stop: [{ hooks: [{ type: 'command', command: '"${CLAUDE_PLUGIN_ROOT}/scripts/c.sh"' }] }],
+      },
+    })
+  );
+  // Declaring the convention file itself must not double-report b.sh.
+  const dup = await checkPluginHooksScripts(
+    { ...makeCcManifest(), hooks: './hooks/hooks.json' },
+    { root }
+  );
+  assert.deepEqual(dup, ['hooks/hooks.json: hook command target does not exist: scripts/b.sh']);
+  const both = await checkPluginHooksScripts(
+    { ...makeCcManifest(), hooks: ['./extra/more.json', './extra/more.json'] },
+    { root }
+  );
+  assert.deepEqual(both, [
+    'hooks/hooks.json: hook command target does not exist: scripts/b.sh',
+    './extra/more.json: hook command target does not exist: scripts/c.sh',
+  ]);
 });

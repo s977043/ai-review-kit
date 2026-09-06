@@ -59,7 +59,7 @@
 
 逆ドリフト検査（`checkAssetRegistration`）の対象は commands / agents のみです。以下は主要 asset ではありませんが、変更時に `plugin:validate` が検査するため登録漏れの対象になります。
 
-- **hooks**: manifest に `hooks` フィールドは現状未配布。配布 hooks を足す場合は `hooks` フィールドの登録が要る（逆ドリフト検査は commands/agents のみで、hooks は forward 検査のみ）
+- **hooks**: manifest に `hooks` フィールドは配布していない（Claude Code は規約パス `hooks/hooks.json` を自動で読み、manifest の `hooks` は追加ファイル専用。規約パスを宣言すると loader が重複と報告する）。`plugin:validate` は宣言の有無に関わらず `hooks/hooks.json` が存在すれば、その `command` が参照する `${CLAUDE_PLUGIN_ROOT}/...` の script 実在を検査する（逆ドリフト検査は commands/agents のみ）
 - **marketplace.json**: plugin 名をリネームした場合、`.claude-plugin/marketplace.json` の `plugins[].name` も更新する（`plugin:validate` が不一致を検出する）
 - **assets**: `composerIcon`（`assets/icon.svg`）のパスを変えた場合、両 manifest と実ファイルを一致させる（`plugin:validate` が実在を検査する）
 
