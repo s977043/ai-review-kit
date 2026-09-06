@@ -13,9 +13,10 @@
 //   2. The inputs handed to the runner are only what the artifact itself
 //      proves: `diff` from `context.changedFiles`, and under `--debug` the
 //      same-named resolved artifacts (`plan`). A Flow whose required inputs
-//      the artifact cannot vouch for therefore stops BEFORE its first step and
-//      records `steps: []` — pinned per entry so the derivation cannot widen
-//      silently into claiming inputs that were never supplied.
+//      the artifact cannot vouch for is therefore recorded, in observe mode,
+//      as every step `stopped` (DETERMINISTIC_UNRUNNABLE) — one record per
+//      step, never an empty array — pinned per entry so the derivation cannot
+//      widen silently into claiming inputs that were never supplied.
 //   3. Record only (RA-1): `gate`, `decision`, `findings`, `plan` and
 //      `suggestedLoopSignal` are identical to the run WITHOUT `--entry` on the
 //      same inputs. The runner's `stopped` never reaches the gate.
@@ -54,17 +55,39 @@ const validate = compileReviewArtifactValidator();
 // under --debug only (debug.resolvedArtifacts.plan.exists). `todo` is NOT
 // claimed as `tasks`, nothing is claimed as `requirements` / `baseline`.
 //
-// `records` = number of step records expected with --debug; 0 means the
-// runner stopped before step 0 because a required input was missing.
+// `steps` = the Flow document's step count (always equals steps.length, in
+// observe mode even when a required input is missing). `plain` / `debug` =
+// the outcome tally expected without / with --debug. A missing required
+// input yields every step `stopped`; only review-plan under --debug has its
+// one required input (`plan`) proven, so its steps are walked.
 const CORE_ENTRIES = [
-  { entry: 'review-plan', required: ['plan'], recordsWithDebug: 11, recordsPlain: 0 },
-  { entry: 'review-replan', required: ['baseline', 'plan'], recordsWithDebug: 0, recordsPlain: 0 },
-  { entry: 'review-task', required: ['diff', 'tasks'], recordsWithDebug: 0, recordsPlain: 0 },
+  {
+    entry: 'review-plan',
+    required: ['plan'],
+    steps: 11,
+    plain: { stopped: 11 },
+    debug: { 'not-implemented': 10, skipped: 1 },
+  },
+  {
+    entry: 'review-replan',
+    required: ['baseline', 'plan'],
+    steps: 11,
+    plain: { stopped: 11 },
+    debug: { stopped: 11 },
+  },
+  {
+    entry: 'review-task',
+    required: ['diff', 'tasks'],
+    steps: 12,
+    plain: { stopped: 12 },
+    debug: { stopped: 12 },
+  },
   {
     entry: 'review-final',
     required: ['diff', 'requirements'],
-    recordsWithDebug: 0,
-    recordsPlain: 0,
+    steps: 14,
+    plain: { stopped: 14 },
+    debug: { stopped: 14 },
   },
 ];
 const ENV = { RIVER_OFFLINE: '1', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', NO_COLOR: '1' };
@@ -92,11 +115,18 @@ async function run(dir, argv) {
 /** Drop the manifest (#2054 PR-4): it pins the flow, so it differs by design. */
 const withoutManifest = ({ executionManifest, ...rest }) => rest;
 
-function assertStepRecords(artifact, entry, expectedCount) {
+function tally(steps) {
+  const out = {};
+  for (const s of steps) out[s.outcome] = (out[s.outcome] ?? 0) + 1;
+  return out;
+}
+
+function assertStepRecords(artifact, entry, expectedCount, expectedTally) {
   const { document } = resolveFlowEntry(entry);
   assert.ok(Array.isArray(artifact.steps), 'steps must be an array');
   assert.equal(artifact.steps.length, expectedCount, `${entry}: step record count`);
-  if (expectedCount > 0) assert.equal(expectedCount, document.steps.length);
+  assert.equal(artifact.steps.length, document.steps.length, `${entry}: one record per Flow step`);
+  assert.deepEqual(tally(artifact.steps), expectedTally, `${entry}: outcome tally`);
   artifact.steps.forEach((step, i) => {
     assert.equal(step.index, i);
     assert.equal(step.id, document.steps[i].use ?? document.steps[i].reviewer);
@@ -113,7 +143,7 @@ function assertStepRecords(artifact, entry, expectedCount) {
 }
 
 describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
-  for (const { entry, required, recordsWithDebug, recordsPlain } of CORE_ENTRIES) {
+  for (const { entry, required, steps, plain: plainTally, debug: debugTally } of CORE_ENTRIES) {
     test(`${entry}: schema-valid, step records per the expectation table, gate untouched`, async (t) => {
       const dir = setupRepo(t);
       // The table's `required` column is what the Flow declares; pin it so a
@@ -127,8 +157,8 @@ describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
       assert.equal(validate(plain), true, JSON.stringify(validate.errors));
       assert.equal(validate(debug), true, JSON.stringify(validate.errors));
 
-      assertStepRecords(plain, entry, recordsPlain);
-      assertStepRecords(debug, entry, recordsWithDebug);
+      assertStepRecords(plain, entry, steps, plainTally);
+      assertStepRecords(debug, entry, steps, debugTally);
 
       // RA-1: the runner's result does not feed the judgment.
       assert.deepEqual(plain.gate, without.gate);

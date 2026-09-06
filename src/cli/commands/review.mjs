@@ -70,9 +70,9 @@ async function resolveBaseRepoDiff(parsed) {
  *     `todo` is not claimed as `tasks`, `pbi-input` not as `requirements`.
  *
  * Everything else is absent, so a Flow whose required inputs the artifact
- * cannot vouch for stops before its first step (`steps: []`); that is the
- * honest record, not a defect. Wiring the resolver's full input set is the
- * capability phase's job.
+ * cannot vouch for is recorded (observe mode) as every step `stopped`; that
+ * is the honest record, not a defect. Wiring the resolver's full input set is
+ * the capability phase's job.
  *
  * @param {Record<string, unknown>} artifact
  * @param {object} document - the resolved Flow document (`inputs[]` names).
@@ -281,7 +281,7 @@ export async function runReviewCommand(parsed) {
     // `capabilities` is empty in this slice, so every step lands on
     // `not-implemented` / `skipped` / `stopped`, and a Flow whose required
     // inputs the artifact cannot vouch for (see `resolvedFlowInputs`) records
-    // `steps: []`. Nothing here reads the runner's `stopped` / `stopReason`
+    // every step as `stopped`. Nothing here reads the runner's `stopped` / `stopReason`
     // back into `gate` / `decision` (RA-1) — both were finalized above and
     // stay byte-identical to the run without `--entry`. `review plan --entry`
     // and `exec --dry-run` / `exec --plan` keep the pin only: they run no
@@ -292,9 +292,9 @@ export async function runReviewCommand(parsed) {
         document: resolvedFlow.document,
         capabilities: {},
         inputs: resolvedFlowInputs(artifact, resolvedFlow.document),
-        // Record only. P1 round 2 adds `mode` (`observe` continues past a
-        // missing capability as `not-implemented`) and reserves `judgment`
-        // for P4; P2 names the mode explicitly and passes no judgment.
+        // Record only: `observe` continues past a missing capability as
+        // `not-implemented` and lists every step even when a required input
+        // is missing. `judgment` is reserved for P4 and not passed here.
         mode: 'observe',
       });
       artifact.steps = result.steps;
