@@ -292,6 +292,10 @@ export async function runReviewCommand(parsed) {
         document: resolvedFlow.document,
         capabilities: {},
         inputs: resolvedFlowInputs(artifact, resolvedFlow.document),
+        // Record only. P1 round 2 adds `mode` (`observe` continues past a
+        // missing capability as `not-implemented`) and reserves `judgment`
+        // for P4; P2 names the mode explicitly and passes no judgment.
+        mode: 'observe',
       });
       artifact.steps = result.steps;
     }
