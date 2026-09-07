@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.104.4](https://github.com/s977043/river-review/compare/v1.104.3...v1.104.4) (2026-09-07)
+
+
+### Bug Fixes
+
+* **scripts:** merge-chain が最後の PR をマージした直後に落ちるのを止める ([#2148](https://github.com/s977043/river-review/issues/2148)) ([aefb587](https://github.com/s977043/river-review/commit/aefb5872a047c1410470de2d2346f6c4b3cafbe1))
+
 ## [1.104.3](https://github.com/s977043/river-review/compare/v1.104.2...v1.104.3) (2026-09-07)
 
 
