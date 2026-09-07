@@ -1155,27 +1155,65 @@ const CLAUDE_PLUGIN_ROOT_PREFIX = '${CLAUDE_PLUGIN_ROOT}/';
 function extractPluginHookTargets(command) {
   const targets = [];
   let quote = null;
+  // `#` opens a comment only at a token boundary. `x#y` is one word in shell, so
+  // treating every unquoted `#` as a comment hid the rest of the command from the
+  // check -- including root escapes (#2139 round 2). A comment ends at the newline,
+  // and scanning resumes on the next line.
+  let atTokenStart = true;
 
   for (let index = 0; index < command.length; index += 1) {
-    if (!quote && command[index] === '#') break;
+    const char = command[index];
+
+    if (!quote && char === '\\') {
+      // Outside single quotes a backslash escapes the next character, so it is
+      // part of the token rather than a separator.
+      index += 1;
+      atTokenStart = false;
+      continue;
+    }
+
+    if (!quote && char === '#' && atTokenStart) {
+      while (index < command.length && command[index] !== '\n') index += 1;
+      atTokenStart = true;
+      continue;
+    }
 
     if (command.startsWith(CLAUDE_PLUGIN_ROOT_PREFIX, index)) {
       const targetStart = index + CLAUDE_PLUGIN_ROOT_PREFIX.length;
-      let targetEnd = targetStart;
-      if (quote) {
-        while (targetEnd < command.length && command[targetEnd] !== quote) targetEnd += 1;
-      } else {
-        while (targetEnd < command.length && !/[\s"'#]/.test(command[targetEnd])) targetEnd += 1;
+      let cursor = targetStart;
+      let target = '';
+      while (cursor < command.length) {
+        const cur = command[cursor];
+        if (quote === "'") {
+          if (cur === "'") break;
+        } else if (cur === '\\' && cursor + 1 < command.length) {
+          // Both inside double quotes and unquoted, the escaped character is
+          // literal. Store the character, not the backslash.
+          target += command[cursor + 1];
+          cursor += 2;
+          continue;
+        } else if (quote === '"') {
+          if (cur === '"') break;
+        } else if (/[\s"'#]/.test(cur)) {
+          break;
+        }
+        target += cur;
+        cursor += 1;
       }
-      targets.push(command.slice(targetStart, targetEnd));
-      index = targetEnd - 1;
+      targets.push(target);
+      index = cursor - 1;
+      atTokenStart = false;
       continue;
     }
 
     if (quote) {
-      if (command[index] === quote) quote = null;
-    } else if (command[index] === '"' || command[index] === "'") {
-      quote = command[index];
+      if (char === quote) quote = null;
+      atTokenStart = false;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+      atTokenStart = false;
+    } else {
+      atTokenStart = /\s/.test(char);
     }
   }
 

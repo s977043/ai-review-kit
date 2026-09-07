@@ -1065,6 +1065,88 @@ test('checkPluginHooksScripts: nonexistent root → no error, no throw', async (
   }
 });
 
+test('checkPluginHooksScripts: `#` inside a word does not end the scan', async () => {
+  // `x#y` is a single shell word, not a comment. Treating every unquoted `#` as a
+  // comment hid the rest of the command -- escapes included -- from the check.
+  const root = makeHooksFixture({
+    hooksJson: JSON.stringify({
+      hooks: {
+        Stop: [
+          {
+            hooks: [{ type: 'command', command: 'echo x#y "${CLAUDE_PLUGIN_ROOT}/../outside.sh"' }],
+          },
+        ],
+      },
+    }),
+    scripts: [],
+  });
+  const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+  assert.deepEqual(errors, [
+    'hooks/hooks.json: hook command target escapes plugin root: ../outside.sh',
+  ]);
+});
+
+test('checkPluginHooksScripts: a comment ends at the newline, not at the command', async () => {
+  const root = makeHooksFixture({
+    hooksJson: JSON.stringify({
+      hooks: {
+        Stop: [
+          {
+            hooks: [
+              {
+                type: 'command',
+                command: 'echo ok\n# note\nbash "${CLAUDE_PLUGIN_ROOT}/../outside.sh"',
+              },
+            ],
+          },
+        ],
+      },
+    }),
+    scripts: [],
+  });
+  const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+  assert.deepEqual(errors, [
+    'hooks/hooks.json: hook command target escapes plugin root: ../outside.sh',
+  ]);
+});
+
+test('checkPluginHooksScripts: a backslash-escaped space stays part of the path', async () => {
+  const root = makeHooksFixture({
+    hooksJson: JSON.stringify({
+      hooks: {
+        Stop: [
+          {
+            hooks: [{ type: 'command', command: 'bash ${CLAUDE_PLUGIN_ROOT}/scripts/a\\ b.sh' }],
+          },
+        ],
+      },
+    }),
+    scripts: ['scripts/a b.sh'],
+  });
+  const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+  assert.deepEqual(errors, []);
+});
+
+test('checkPluginHooksScripts: an escaped quote outside a string does not open one', async () => {
+  // `\\"` is a literal quote, so the command stays unquoted and the target ends at
+  // the space. Without escape handling the parser would think a string had opened
+  // and swallow the space, resolving a different -- existing -- path.
+  const root = makeHooksFixture({
+    hooksJson: JSON.stringify({
+      hooks: {
+        Stop: [
+          {
+            hooks: [{ type: 'command', command: 'bash \\" ${CLAUDE_PLUGIN_ROOT}/scripts/a b.sh' }],
+          },
+        ],
+      },
+    }),
+    scripts: ['scripts/a b.sh'],
+  });
+  const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+  assert.deepEqual(errors, ['hooks/hooks.json: hook command target does not exist: scripts/a']);
+});
+
 test('checkPluginHooksScripts: command target outside plugin root → fail', async () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-hooks-parent-'));
   const root = path.join(parent, 'plugin');
