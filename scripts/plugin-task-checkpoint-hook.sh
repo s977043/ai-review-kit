@@ -79,7 +79,18 @@ case "$KEEP" in ''|*[!0-9]*) KEEP=20;; esac
 total=$(find "$OUT_DIR" -maxdepth 1 -name '*.json' | wc -l | tr -d ' ')
 drop=$((total - KEEP))
 if [ "$drop" -gt 0 ]; then
-  find "$OUT_DIR" -maxdepth 1 -name '*.json' | sort | head -n "$drop" | while IFS= read -r old; do
+  # Count inside the loop and skip past `drop` instead of piping into `head`.
+  # Any consumer that closes the pipe early -- `head -n "$drop"`, or a loop that
+  # `break`s -- kills `sort` with SIGPIPE, and `pipefail` turns that into a 141
+  # exit for the whole hook (#2135). Whether it fires depends on the pipe buffer
+  # size, so it reproduced on macOS while Linux CI stayed green. `continue`
+  # keeps reading to EOF, so `sort` always finishes writing.
+  # A here-doc fed from a command substitution was tried first and deadlocked on
+  # lists this long; do not reintroduce one here.
+  seen=0
+  find "$OUT_DIR" -maxdepth 1 -name '*.json' | sort | while IFS= read -r old; do
+    seen=$((seen + 1))
+    [ "$seen" -le "$drop" ] || continue
     rm -f -- "$old" "$old.log"
   done
 fi
