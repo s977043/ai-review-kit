@@ -1146,6 +1146,42 @@ export async function loadSsotContents(files, root = ROOT) {
 /** Convention path Claude Code loads automatically, with or without a manifest `hooks` field. */
 export const PLUGIN_HOOKS_CONVENTION_PATH = 'hooks/hooks.json';
 
+const CLAUDE_PLUGIN_ROOT_PREFIX = '${CLAUDE_PLUGIN_ROOT}/';
+
+/**
+ * Extract plugin-root references from the limited shell syntax accepted in hook
+ * commands: bare tokens, single/double quoted tokens, and line-end comments.
+ */
+function extractPluginHookTargets(command) {
+  const targets = [];
+  let quote = null;
+
+  for (let index = 0; index < command.length; index += 1) {
+    if (!quote && command[index] === '#') break;
+
+    if (command.startsWith(CLAUDE_PLUGIN_ROOT_PREFIX, index)) {
+      const targetStart = index + CLAUDE_PLUGIN_ROOT_PREFIX.length;
+      let targetEnd = targetStart;
+      if (quote) {
+        while (targetEnd < command.length && command[targetEnd] !== quote) targetEnd += 1;
+      } else {
+        while (targetEnd < command.length && !/[\s"'#]/.test(command[targetEnd])) targetEnd += 1;
+      }
+      targets.push(command.slice(targetStart, targetEnd));
+      index = targetEnd - 1;
+      continue;
+    }
+
+    if (quote) {
+      if (command[index] === quote) quote = null;
+    } else if (command[index] === '"' || command[index] === "'") {
+      quote = command[index];
+    }
+  }
+
+  return targets;
+}
+
 /**
  * Verify that every `${CLAUDE_PLUGIN_ROOT}/<path>` command target referenced
  * from the plugin's hooks files exists under `root`.
@@ -1224,9 +1260,7 @@ export async function checkPluginHooksScripts(ccManifest, { root = ROOT } = {}) 
     }
     // Extract ${CLAUDE_PLUGIN_ROOT}/<path> targets and verify they exist.
     for (const command of commands) {
-      const matches = command.match(/\$\{CLAUDE_PLUGIN_ROOT\}\/([^\s"']+)/g) || [];
-      for (const m of matches) {
-        const scriptRel = m.replace(/\$\{CLAUDE_PLUGIN_ROOT\}\//, '');
+      for (const scriptRel of extractPluginHookTargets(command)) {
         const scriptPath = path.resolve(resolvedRoot, scriptRel);
         if (!isUnderRoot(scriptPath, resolvedRoot)) {
           errors.push(`${label}: hook command target escapes plugin root: ${scriptRel}`);

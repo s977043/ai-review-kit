@@ -996,6 +996,61 @@ test('checkPluginHooksScripts: convention path present, script missing → fail 
   assert.deepEqual(errors, ['hooks/hooks.json: hook command target does not exist: scripts/b.sh']);
 });
 
+test('checkPluginHooksScripts: parses quoted paths and ignores line-end comments', async () => {
+  const root = makeHooksFixture({
+    hooksJson: JSON.stringify({
+      hooks: {
+        Stop: [
+          {
+            hooks: [
+              {
+                type: 'command',
+                command:
+                  'bash "${CLAUDE_PLUGIN_ROOT}/scripts/a b.sh" && bash "${CLAUDE_PLUGIN_ROOT}/scripts/日本語.sh" # ${CLAUDE_PLUGIN_ROOT}/../commented.sh',
+              },
+              { type: 'command', command: "bash '${CLAUDE_PLUGIN_ROOT}/scripts/single quoted.sh'" },
+              { type: 'command', command: 'bash "${CLAUDE_PLUGIN_ROOT}/scripts/has#hash.sh"' },
+            ],
+          },
+        ],
+      },
+    }),
+    scripts: [
+      'scripts/a b.sh',
+      'scripts/日本語.sh',
+      'scripts/single quoted.sh',
+      'scripts/has#hash.sh',
+    ],
+  });
+  const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+  assert.deepEqual(errors, []);
+});
+
+test('checkPluginHooksScripts: root references in arguments still undergo containment checks', async () => {
+  const root = makeHooksFixture({
+    hooksJson: JSON.stringify({
+      hooks: {
+        Stop: [
+          {
+            hooks: [
+              {
+                type: 'command',
+                command:
+                  'bash "${CLAUDE_PLUGIN_ROOT}/scripts/a.sh" --reference "${CLAUDE_PLUGIN_ROOT}/../shared.sh"',
+              },
+            ],
+          },
+        ],
+      },
+    }),
+    scripts: ['scripts/a.sh'],
+  });
+  const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+  assert.deepEqual(errors, [
+    'hooks/hooks.json: hook command target escapes plugin root: ../shared.sh',
+  ]);
+});
+
 test('checkPluginHooksScripts: nonexistent root → no error, no throw', async () => {
   // The containment check resolves the real path of `root`; a root that was
   // never created must stay a no-op rather than throwing ENOENT (#2132).
