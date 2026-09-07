@@ -1146,6 +1146,83 @@ export async function loadSsotContents(files, root = ROOT) {
 /** Convention path Claude Code loads automatically, with or without a manifest `hooks` field. */
 export const PLUGIN_HOOKS_CONVENTION_PATH = 'hooks/hooks.json';
 
+const CLAUDE_PLUGIN_ROOT_PREFIX = '${CLAUDE_PLUGIN_ROOT}/';
+
+/**
+ * Extract plugin-root references from the limited shell syntax accepted in hook
+ * commands: bare tokens, single/double quoted tokens, and line-end comments.
+ */
+function extractPluginHookTargets(command) {
+  const targets = [];
+  let quote = null;
+  // `#` opens a comment only at a token boundary. `x#y` is one word in shell, so
+  // treating every unquoted `#` as a comment hid the rest of the command from the
+  // check -- including root escapes (#2139 round 2). A comment ends at the newline,
+  // and scanning resumes on the next line.
+  let atTokenStart = true;
+
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index];
+
+    if (!quote && char === '\\') {
+      // Outside single quotes a backslash escapes the next character, so it is
+      // part of the token rather than a separator.
+      index += 1;
+      atTokenStart = false;
+      continue;
+    }
+
+    if (!quote && char === '#' && atTokenStart) {
+      while (index < command.length && command[index] !== '\n') index += 1;
+      atTokenStart = true;
+      continue;
+    }
+
+    if (command.startsWith(CLAUDE_PLUGIN_ROOT_PREFIX, index)) {
+      const targetStart = index + CLAUDE_PLUGIN_ROOT_PREFIX.length;
+      let cursor = targetStart;
+      let target = '';
+      while (cursor < command.length) {
+        const cur = command[cursor];
+        if (quote === "'") {
+          if (cur === "'") break;
+        } else if (cur === '\\' && cursor + 1 < command.length) {
+          // Both inside double quotes and unquoted, the escaped character is
+          // literal. Store the character, not the backslash.
+          target += command[cursor + 1];
+          cursor += 2;
+          continue;
+        } else if (quote === '"') {
+          if (cur === '"') break;
+        } else if (/[\s"']/.test(cur)) {
+          // `#` is not a separator inside a word: `a.sh#suffix` is one shell token,
+          // and treating it as one let a missing target slip through (#2139 round 3).
+          // Only the token-boundary `#` handled above opens a comment.
+          break;
+        }
+        target += cur;
+        cursor += 1;
+      }
+      targets.push(target);
+      index = cursor - 1;
+      atTokenStart = false;
+      continue;
+    }
+
+    if (quote) {
+      if (char === quote) quote = null;
+      atTokenStart = false;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+      atTokenStart = false;
+    } else {
+      atTokenStart = /\s/.test(char);
+    }
+  }
+
+  return targets;
+}
+
 /**
  * Verify that every `${CLAUDE_PLUGIN_ROOT}/<path>` command target referenced
  * from the plugin's hooks files exists under `root`.
@@ -1224,9 +1301,7 @@ export async function checkPluginHooksScripts(ccManifest, { root = ROOT } = {}) 
     }
     // Extract ${CLAUDE_PLUGIN_ROOT}/<path> targets and verify they exist.
     for (const command of commands) {
-      const matches = command.match(/\$\{CLAUDE_PLUGIN_ROOT\}\/([^\s"']+)/g) || [];
-      for (const m of matches) {
-        const scriptRel = m.replace(/\$\{CLAUDE_PLUGIN_ROOT\}\//, '');
+      for (const scriptRel of extractPluginHookTargets(command)) {
         const scriptPath = path.resolve(resolvedRoot, scriptRel);
         if (!isUnderRoot(scriptPath, resolvedRoot)) {
           errors.push(`${label}: hook command target escapes plugin root: ${scriptRel}`);
