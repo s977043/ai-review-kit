@@ -54,6 +54,12 @@ Agent ツールで 3 本を **1 メッセージで同時に**起動する。`sub
 3. 変異注入（既存テストの検出力を測るために実装を一時的に壊す）を行う場合は、
    `git worktree add --detach <mktemp -d の path> <to>` で自分専用の worktree を作り、その中だけで行う。
    終了前に `git worktree remove --force <path>` で必ず消す。対象リポジトリ本体の作業ツリーには一切触れない。
+   その worktree で `npm test` や `npm run build:action` を走らせるなら、`node_modules` は
+   **その worktree の中で `npm ci` して用意する**。対象リポジトリの `node_modules` を symlink してはならない。
+   親の `node_modules` はレビュー対象の版の lockfile と一致している保証が無く、`npm run build:action` の
+   出力が committed dist とズレて「dist が再現しない」という偽の finding になる（2026-09-07、v1.104.0 の
+   範囲レビューで視点 B が major として報告し、隔離 worktree の `npm ci` 後は
+   `git diff --exit-code runners/github-action/dist/` が exit 0 で再現したため反証した）。
 4. 破棄系 git コマンド（`reset --hard` / `checkout -- <file>` / `clean` / `stash drop` / `push --force`）と `rm -rf` を対象リポジトリで実行しない。
 5. 修正は提案に留める。ファイル編集・commit・push・issue / PR コメントの投稿を行わない。
 6. 差分に無いコードへの推測、一般論だけの指摘、範囲の目的と無関係な指摘は書かない。
