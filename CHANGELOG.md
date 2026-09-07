@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.104.2](https://github.com/s977043/river-review/compare/v1.104.1...v1.104.2) (2026-09-07)
+
+
+### Bug Fixes
+
+* **scripts:** checkpoint hook の剪定で SIGPIPE により 141 終了するのを止める ([#2142](https://github.com/s977043/river-review/issues/2142)) ([65aa523](https://github.com/s977043/river-review/commit/65aa523a2fb349b1d9e2884fbd9849ccf5a7abd0)), closes [#2135](https://github.com/s977043/river-review/issues/2135)
+
 ## [1.104.1](https://github.com/s977043/river-review/compare/v1.104.0...v1.104.1) (2026-09-07)
 
 
