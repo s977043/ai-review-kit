@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.104.1](https://github.com/s977043/river-review/compare/v1.104.0...v1.104.1) (2026-09-07)
+
+
+### Bug Fixes
+
+* **scripts:** hook command の実行対象が plugin root を脱出したら検証で落とす ([#2136](https://github.com/s977043/river-review/issues/2136)) ([d4b27ee](https://github.com/s977043/river-review/commit/d4b27eedeb49b3876887ec7d052271ca7b159624))
+
 ## [1.104.0](https://github.com/s977043/river-review/compare/v1.103.0...v1.104.0) (2026-09-06)
 
 
