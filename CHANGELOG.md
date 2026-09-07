@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.104.3](https://github.com/s977043/river-review/compare/v1.104.2...v1.104.3) (2026-09-07)
+
+
+### Bug Fixes
+
+* **scripts:** hook command の実行対象を引用状態を追って抽出する ([#2145](https://github.com/s977043/river-review/issues/2145)) ([bb6dbe9](https://github.com/s977043/river-review/commit/bb6dbe9401a0280ec6a2ce0d1fdbfca9a009e89d))
+
 ## [1.104.2](https://github.com/s977043/river-review/compare/v1.104.1...v1.104.2) (2026-09-07)
 
 
