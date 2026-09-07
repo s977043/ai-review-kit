@@ -1035,6 +1035,33 @@ test('checkPluginHooksScripts: command target outside plugin root → fail', asy
   }
 });
 
+test('checkPluginHooksScripts: nonexistent target outside plugin root → escape, not missing', async () => {
+  // Pins the lexical containment check on its own. `realpath` cannot speak for a
+  // target that does not exist, so only the `path.resolve` branch can classify
+  // this as an escape; without it the message degrades to "does not exist".
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-hooks-ghost-'));
+  const root = path.join(parent, 'plugin');
+  try {
+    fs.mkdirSync(path.join(root, 'hooks'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'hooks', 'hooks.json'),
+      JSON.stringify({
+        hooks: {
+          Stop: [
+            { hooks: [{ type: 'command', command: 'bash "${CLAUDE_PLUGIN_ROOT}/../ghost.sh"' }] },
+          ],
+        },
+      })
+    );
+    const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+    assert.deepEqual(errors, [
+      'hooks/hooks.json: hook command target escapes plugin root: ../ghost.sh',
+    ]);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
 test('checkPluginHooksScripts: symlinked command target outside plugin root → fail', async () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-hooks-symlink-'));
   const root = path.join(parent, 'plugin');
