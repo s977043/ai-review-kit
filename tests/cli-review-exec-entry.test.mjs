@@ -46,8 +46,9 @@ const FIXTURE = resolve(__dirname, 'fixtures', 'plangate-review-artifacts');
 const SCHEMA = JSON.parse(
   readFileSync(resolve(__dirname, '..', 'schemas', 'review-artifact.schema.json'), 'utf8')
 );
-const OUTCOMES = new Set(SCHEMA.properties.steps.items.properties.outcome.enum);
-const KINDS = new Set(SCHEMA.properties.steps.items.properties.kind.enum);
+// Keep the expected vocabularies literal so schema changes cannot make this test self-consistent.
+const OUTCOMES = new Set(['executed', 'skipped', 'degraded', 'stopped', 'not-implemented']);
+const KINDS = new Set(['primitive', 'reviewer']);
 const validate = compileReviewArtifactValidator();
 
 // The fixture repo supplies plan.md, todo.md and diff.patch. What the artifact
@@ -143,6 +144,12 @@ function assertStepRecords(artifact, entry, expectedCount, expectedTally) {
 }
 
 describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
+  test('step record vocabularies exactly match the artifact schema', () => {
+    const schemaStep = SCHEMA.properties.steps.items.properties;
+    assert.deepEqual([...schemaStep.outcome.enum].sort(), [...OUTCOMES].sort());
+    assert.deepEqual([...schemaStep.kind.enum].sort(), [...KINDS].sort());
+  });
+
   for (const { entry, required, steps, plain: plainTally, debug: debugTally } of CORE_ENTRIES) {
     test(`${entry}: schema-valid, step records per the expectation table, gate untouched`, async (t) => {
       const dir = setupRepo(t);

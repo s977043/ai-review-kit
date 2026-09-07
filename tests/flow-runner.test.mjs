@@ -42,6 +42,15 @@ const REPO_ROOT = resolve(HERE, '..');
 const FLOWS_DIR = resolve(REPO_ROOT, 'flows');
 const CONTRACTS_DIR = resolve(REPO_ROOT, 'agents', 'contracts');
 
+// Keep this literal so changes to the runner's export cannot make this test self-consistent.
+const STEP_RECORD_OUTCOMES = new Set([
+  'executed',
+  'skipped',
+  'degraded',
+  'stopped',
+  'not-implemented',
+]);
+
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 
 const flows = readdirSync(FLOWS_DIR)
@@ -62,6 +71,10 @@ const stepIdOf = (step) => step.use ?? step.reviewer;
 const outcomesOf = (result) => result.steps.map((record) => record.outcome);
 
 describe('flow-runner: shipped Flow documents', () => {
+  test('STEP_OUTCOMES exactly matches the literal step-record vocabulary', () => {
+    assert.deepEqual([...STEP_OUTCOMES].sort(), [...STEP_RECORD_OUTCOMES].sort());
+  });
+
   test('the shipped Flow documents were found', () => {
     assert.ok(flows.length > 0, 'no *.flow.json under flows/');
   });
@@ -84,7 +97,7 @@ describe('flow-runner: shipped Flow documents', () => {
       );
       for (const record of result.steps) {
         assert.ok(
-          STEP_OUTCOMES.includes(record.outcome),
+          STEP_RECORD_OUTCOMES.has(record.outcome),
           `${name}[${record.index}] ${record.outcome}`
         );
         assert.ok(['primitive', 'reviewer'].includes(record.kind));
