@@ -4,6 +4,8 @@
 # the distributed plugin surface.
 ignore_paths = [
   "tests/**",
+  # 一時: #2152 の通知ワークフローが実際に発火するかを確かめるための行。マージしない。
+  "pages/**",
   "scripts/**",
   "artifacts/**",
   "build/**",
