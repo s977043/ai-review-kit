@@ -359,8 +359,14 @@ main() {
     echo "merged #${pr}"
     merged_so_far="${merged_so_far:+${merged_so_far} }#${pr}"
 
-    rest=("${remaining[@]:1}")
-    remaining=("${rest[@]}")
+    # bash 3.2 (the system bash on macOS) treats `"${arr[@]}"` on an empty array as
+    # an unbound variable under `set -u`, so dropping the last PR aborted the script
+    # right after a successful merge. Rebuild the list only while entries remain.
+    if [ "${#remaining[@]}" -gt 1 ]; then
+      remaining=("${remaining[@]:1}")
+    else
+      remaining=()
+    fi
   done
   echo "All PRs merged."
   return 0
