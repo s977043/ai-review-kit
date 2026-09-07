@@ -996,6 +996,76 @@ test('checkPluginHooksScripts: convention path present, script missing → fail 
   assert.deepEqual(errors, ['hooks/hooks.json: hook command target does not exist: scripts/b.sh']);
 });
 
+test('checkPluginHooksScripts: nonexistent root → no error, no throw', async () => {
+  // The containment check resolves the real path of `root`; a root that was
+  // never created must stay a no-op rather than throwing ENOENT (#2132).
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-hooks-noroot-'));
+  try {
+    const errors = await checkPluginHooksScripts(makeCcManifest(), {
+      root: path.join(parent, 'never-created'),
+    });
+    assert.deepEqual(errors, []);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('checkPluginHooksScripts: command target outside plugin root → fail', async () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-hooks-parent-'));
+  const root = path.join(parent, 'plugin');
+  try {
+    fs.mkdirSync(path.join(root, 'hooks'), { recursive: true });
+    fs.writeFileSync(path.join(parent, 'outside.sh'), '#!/bin/sh\n');
+    fs.writeFileSync(
+      path.join(root, 'hooks', 'hooks.json'),
+      JSON.stringify({
+        hooks: {
+          Stop: [
+            { hooks: [{ type: 'command', command: 'bash "${CLAUDE_PLUGIN_ROOT}/../outside.sh"' }] },
+          ],
+        },
+      })
+    );
+    const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+    assert.deepEqual(errors, [
+      'hooks/hooks.json: hook command target escapes plugin root: ../outside.sh',
+    ]);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('checkPluginHooksScripts: symlinked command target outside plugin root → fail', async () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-hooks-symlink-'));
+  const root = path.join(parent, 'plugin');
+  try {
+    fs.mkdirSync(path.join(root, 'hooks'), { recursive: true });
+    fs.writeFileSync(path.join(parent, 'outside.sh'), '#!/bin/sh\n');
+    fs.mkdirSync(path.join(root, 'scripts'));
+    fs.symlinkSync(path.join(parent, 'outside.sh'), path.join(root, 'scripts', 'outside.sh'));
+    fs.writeFileSync(
+      path.join(root, 'hooks', 'hooks.json'),
+      JSON.stringify({
+        hooks: {
+          Stop: [
+            {
+              hooks: [
+                { type: 'command', command: 'bash "${CLAUDE_PLUGIN_ROOT}/scripts/outside.sh"' },
+              ],
+            },
+          ],
+        },
+      })
+    );
+    const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+    assert.deepEqual(errors, [
+      'hooks/hooks.json: hook command target escapes plugin root: scripts/outside.sh',
+    ]);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
 test('checkPluginHooksScripts: no hooks/hooks.json → no-op', async () => {
   const root = makeHooksFixture({ scripts: ['scripts/a.sh'] });
   const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
