@@ -1194,7 +1194,10 @@ function extractPluginHookTargets(command) {
           continue;
         } else if (quote === '"') {
           if (cur === '"') break;
-        } else if (/[\s"'#]/.test(cur)) {
+        } else if (/[\s"']/.test(cur)) {
+          // `#` is not a separator inside a word: `a.sh#suffix` is one shell token,
+          // and treating it as one let a missing target slip through (#2139 round 3).
+          // Only the token-boundary `#` handled above opens a comment.
           break;
         }
         target += cur;

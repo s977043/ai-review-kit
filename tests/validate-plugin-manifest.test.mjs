@@ -1147,6 +1147,27 @@ test('checkPluginHooksScripts: an escaped quote outside a string does not open o
   assert.deepEqual(errors, ['hooks/hooks.json: hook command target does not exist: scripts/a']);
 });
 
+test('checkPluginHooksScripts: `#` inside the path is part of the path', async () => {
+  // `a.sh#suffix` is one shell token. Ending the path at the `#` resolved a
+  // different -- existing -- file and let the real, missing target through.
+  const root = makeHooksFixture({
+    hooksJson: JSON.stringify({
+      hooks: {
+        Stop: [
+          {
+            hooks: [{ type: 'command', command: 'bash ${CLAUDE_PLUGIN_ROOT}/scripts/a.sh#suffix' }],
+          },
+        ],
+      },
+    }),
+    scripts: ['scripts/a.sh'],
+  });
+  const errors = await checkPluginHooksScripts(makeCcManifest(), { root });
+  assert.deepEqual(errors, [
+    'hooks/hooks.json: hook command target does not exist: scripts/a.sh#suffix',
+  ]);
+});
+
 test('checkPluginHooksScripts: command target outside plugin root → fail', async () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-hooks-parent-'));
   const root = path.join(parent, 'plugin');
