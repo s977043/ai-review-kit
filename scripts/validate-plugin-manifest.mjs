@@ -1164,6 +1164,18 @@ export const PLUGIN_HOOKS_CONVENTION_PATH = 'hooks/hooks.json';
 export async function checkPluginHooksScripts(ccManifest, { root = ROOT } = {}) {
   const errors = [];
   const cc = ccManifest && typeof ccManifest === 'object' ? ccManifest : {};
+  const resolvedRoot = path.resolve(root);
+  // A root that does not exist is not an error here: the caller may point at a
+  // plugin directory that was never created, and the checks below report that
+  // through "does not exist" rather than throwing. Keep the pre-#2132 contract.
+  const realRoot = await fs.realpath(resolvedRoot).catch(() => resolvedRoot);
+  const isUnderRoot = (candidate, base) => {
+    const relative = path.relative(base, candidate);
+    return (
+      relative === '' ||
+      (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
+    );
+  };
   const exists = async (rel) => {
     try {
       await fs.access(path.join(root, rel));
@@ -1215,7 +1227,17 @@ export async function checkPluginHooksScripts(ccManifest, { root = ROOT } = {}) 
       const matches = command.match(/\$\{CLAUDE_PLUGIN_ROOT\}\/([^\s"']+)/g) || [];
       for (const m of matches) {
         const scriptRel = m.replace(/\$\{CLAUDE_PLUGIN_ROOT\}\//, '');
-        if (!(await exists(scriptRel))) {
+        const scriptPath = path.resolve(resolvedRoot, scriptRel);
+        if (!isUnderRoot(scriptPath, resolvedRoot)) {
+          errors.push(`${label}: hook command target escapes plugin root: ${scriptRel}`);
+          continue;
+        }
+        try {
+          const realScriptPath = await fs.realpath(scriptPath);
+          if (!isUnderRoot(realScriptPath, realRoot)) {
+            errors.push(`${label}: hook command target escapes plugin root: ${scriptRel}`);
+          }
+        } catch {
           errors.push(`${label}: hook command target does not exist: ${scriptRel}`);
         }
       }
