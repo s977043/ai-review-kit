@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.105.0](https://github.com/s977043/river-review/compare/v1.104.4...v1.105.0) (2026-09-08)
+
+
+### Features
+
+* **cli:** [#2011](https://github.com/s977043/river-review/issues/2011) AC7 P3-1 Flow 入力の解決を --debug から切り離す ([#2155](https://github.com/s977043/river-review/issues/2155)) ([28cd3ee](https://github.com/s977043/river-review/commit/28cd3ee64be948e590e9bdc2c34a6e713e8c9c02))
+* **cli:** [#2011](https://github.com/s977043/river-review/issues/2011) AC7 P3-2 標準 artifact ID を Flow 入力へ結ぶ既定値を入れる ([#2157](https://github.com/s977043/river-review/issues/2157)) ([0d57d28](https://github.com/s977043/river-review/commit/0d57d28fb80f719ce35348b91cd280a2889442c0))
+
 ## [1.104.4](https://github.com/s977043/river-review/compare/v1.104.3...v1.104.4) (2026-09-07)
 
 
