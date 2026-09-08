@@ -203,6 +203,8 @@ bootstrap の出力（node 行と manifest 行）を完了報告へそのまま�
 
 受入条件ごとに「何を実測し、何を転記するか」を書く。script なら exit code 契約の各ケースを実測して転記、test なら変異注入（検査を 1 つ外して落ちること）の fail 件数、docs なら `npx textlint --no-cache <file>` の exit code。最後に `bash scripts/tree-pollution-check.sh <worktree>` を入れる。
 
+変異注入は**呼び出し側の引数を落とす形でも 1 回行う**。関数へ新しい引数を足したときは、その引数を渡す行を消してテストが赤くなるかを測る。実装内部を壊す変異は内側の unit test が拾うため、引数を渡す配線だけが無検査で残る。
+
 ### 4. 終了時の指示と完了報告
 
 ```text
@@ -321,6 +323,12 @@ commitlint の subject-case ルールにより、大文字始まりの subject�
 ### 検証は実出力 + exit code
 
 報告の具体性（もっともらしい PR 番号・テスト件数・コマンド出力ブロック）は実行の証拠にならない。ワーカー自身も、検証結果を記憶や推測ではなく実行したコマンドの実出力・exit code から転記すること。オーガナイザー側の裏取り手順は `/verify-agent-report` を参照。
+
+### 変異注入は引数を渡す行にも当てる
+
+関数へ引数を足す変更では、実装内部を壊す変異を内側の unit test が拾います。そこで変異注入を止めると、呼び出し側の配線だけが無検査で残ります。テスト名は配線を検査しているように読めるため、名前からは気づけません。
+
+2026-09-08 の実測がその形にあたります。Epic #2011 AC7 P3 で `executeFlow` へ `inputSources` を足しました。`src/cli/commands/review.mjs` の呼び出しからその引数を落としても、`tests/cli-review-exec-entry.test.mjs` は 13 件すべて緑のままでした。他の 13 件は `inputs` と `unboundInputNames` だけで満たされ、`inputSources` を要する経路が 1 件もなかったためです。その経路とは、束縛済みでありながら artifact が存在しない場合を指します。PR #2162 で当該経路の end-to-end ケースを 1 件足し、同じ変異で 1 fail になることを確かめました。
 
 ### PR 作成までで停止・CI 待ちとマージ禁止
 
