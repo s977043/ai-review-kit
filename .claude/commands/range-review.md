@@ -37,6 +37,36 @@ git log --format='%s' <from>..<to> | grep -oE '\(#[0-9]+\)$' | tr -d '(#)' | sor
 
 Agent ツールで 3 本を **1 メッセージで同時に**起動する。`subagent_type: general-purpose`、全て**読み取り専用**の指示で走らせる。各 agent に渡すプロンプトは、下の「共通規律」ブロックの後ろに視点別ブロックを 1 つ足したものである。共通規律は 3 本とも省略せず全文入れる。
 
+#### 3 本が同時に立ち上がらないとき: Codex CLI で直列に回す
+
+並列起動は失敗する日がある。2026-09-04 から 09-08 までの 5 日連続で、メモリ逼迫による background task の kill とレート上限がログに残っている。**視点を減らして 2 本で済ませてはならない**（後掲「禁止事項」）。並列が通らないなら、同じプロンプトを Codex CLI へ渡して 1 本ずつ直列に回す。
+
+準備は 1 回だけ行う。作業ツリーは全視点で共有してよい（読み取り専用のため）。
+
+```bash
+R=$(mktemp -d) && echo "$R" > /tmp/rr-base.txt
+git worktree add --detach "$R/wt" <to>
+# 共通規律を 1 ファイルに置き、視点別ブロックを後ろへ結合する
+cat > "$R/common.txt" <<'EOF'
+<共通規律の全文>
+EOF
+cat "$R/common.txt" "$R/pa-body.txt" > "$R/pa.txt"
+```
+
+各視点はこの形で起動する。`--sandbox workspace-write` は変異注入（規律 3）に要る。
+
+```bash
+export PATH=/opt/homebrew/opt/node@22/bin:$PATH
+codex exec -C "$R/wt" --sandbox workspace-write --skip-git-repo-check - < "$R/pa.txt" > "$R/out-a.md" 2> "$R/err-a.log"
+```
+
+前提と後始末は次のとおり。
+
+- **Codex のサンドボックスはネットワークを持たない。** `npm ci` は `ENOTCACHED` で落ちるので、起動前にオーガナイザーが worktree で `npm ci` を済ませておく。
+- **Codex は commit できない**（`index.lock` が拒否される）。finding に基づく修正 PR はオーガナイザーが作る。
+- 3 本が終わったら `git worktree remove --force "$R/wt"` で撤去する。
+- 直列で回した事実と、その理由（並列が落ちた／レート上限）を報告に書く。
+
 #### 共通規律（3 本すべてのプロンプト冒頭に貼る）
 
 ```text
