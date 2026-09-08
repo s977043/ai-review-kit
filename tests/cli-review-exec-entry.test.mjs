@@ -150,6 +150,40 @@ describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
     assert.deepEqual([...schemaStep.kind.enum].sort(), [...KINDS].sort());
   });
 
+  // The generic loop over resolver IDs (`names.has(id)`) is what supplies every
+  // input other than `diff` -- `plan` today, and `tasks` / `requirements` /
+  // `baseline` once bindings land (P3-2). Pinning only `review-plan` let a
+  // mutation to `id === 'plan'` pass, so the entries whose required inputs are
+  // NOT `plan` are pinned here by supplying them through `--artifact`.
+  const SUPPLIED_ENTRIES = [
+    { entry: 'review-replan', supply: ['baseline=plan.md'], steps: 11 },
+    { entry: 'review-task', supply: ['tasks=todo.md'], steps: 12 },
+    { entry: 'review-final', supply: ['requirements=plan.md'], steps: 14 },
+  ];
+
+  for (const { entry, supply, steps } of SUPPLIED_ENTRIES) {
+    test(`${entry}: required inputs supplied via --artifact walk every step`, async (t) => {
+      const dir = setupRepo(t);
+      const argv = ['exec', '--entry', entry];
+      for (const pair of supply) argv.push('--artifact', pair);
+
+      const stopped = await run(dir, ['exec', '--entry', entry]);
+      assert.deepEqual(tally(stopped.steps), { stopped: steps });
+
+      const walked = await run(dir, argv);
+      assert.equal(validate(walked), true, JSON.stringify(validate.errors));
+      assert.equal(walked.steps.length, steps);
+      // Every step is reached: no `stopped` record survives once the required
+      // inputs are proven. The exact split between not-implemented and skipped
+      // is the Flow's business, not this test's.
+      assert.equal(
+        walked.steps.filter((step) => step.outcome === 'stopped').length,
+        0,
+        JSON.stringify(tally(walked.steps))
+      );
+    });
+  }
+
   for (const { entry, required, steps, plain: plainTally, debug: debugTally } of CORE_ENTRIES) {
     test(`${entry}: schema-valid, step records per the expectation table, gate untouched`, async (t) => {
       const dir = setupRepo(t);
