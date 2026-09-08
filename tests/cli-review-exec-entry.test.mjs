@@ -10,10 +10,10 @@
 //      closed set the artifact schema declares. Measured on the 4 core
 //      entries against a HAND-WRITTEN table (below), not against the runner,
 //      so the test is not self-consistent with the code under test.
-//   2. The inputs handed to the runner are only what the artifact itself
-//      proves: `diff` from `context.changedFiles`, and under `--debug` the
-//      same-named resolved artifacts (`plan`). A Flow whose required inputs
-//      the artifact cannot vouch for is therefore recorded, in observe mode,
+//   2. The inputs handed to the runner are only what plan resolution proves:
+//      `diff` from `context.changedFiles`, and same-named resolved artifacts
+//      (`plan`) returned from the plan execution. A Flow whose required inputs
+//      cannot be proven is therefore recorded, in observe mode,
 //      as every step `stopped` (DETERMINISTIC_UNRUNNABLE) — one record per
 //      step, never an empty array — pinned per entry so the derivation cannot
 //      widen silently into claiming inputs that were never supplied.
@@ -52,21 +52,21 @@ const KINDS = new Set(['primitive', 'reviewer']);
 const validate = compileReviewArtifactValidator();
 
 // The fixture repo supplies plan.md, todo.md and diff.patch. What the artifact
-// can vouch for as Flow inputs: `diff` always (context.changedFiles), `plan`
-// under --debug only (debug.resolvedArtifacts.plan.exists). `todo` is NOT
+// can prove as Flow inputs: `diff` always (context.changedFiles), `plan` from
+// the resolver return on every run. `todo` is NOT
 // claimed as `tasks`, nothing is claimed as `requirements` / `baseline`.
 //
 // `steps` = the Flow document's step count (always equals steps.length, in
 // observe mode even when a required input is missing). `plain` / `debug` =
 // the outcome tally expected without / with --debug. A missing required
-// input yields every step `stopped`; only review-plan under --debug has its
-// one required input (`plan`) proven, so its steps are walked.
+// input yields every step `stopped`; review-plan has its one required input
+// (`plan`) proven with and without --debug, so its steps are walked.
 const CORE_ENTRIES = [
   {
     entry: 'review-plan',
     required: ['plan'],
     steps: 11,
-    plain: { stopped: 11 },
+    plain: { 'not-implemented': 10, skipped: 1 },
     debug: { 'not-implemented': 10, skipped: 1 },
   },
   {
@@ -150,6 +150,40 @@ describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
     assert.deepEqual([...schemaStep.kind.enum].sort(), [...KINDS].sort());
   });
 
+  // The generic loop over resolver IDs (`names.has(id)`) is what supplies every
+  // input other than `diff` -- `plan` today, and `tasks` / `requirements` /
+  // `baseline` once bindings land (P3-2). Pinning only `review-plan` let a
+  // mutation to `id === 'plan'` pass, so the entries whose required inputs are
+  // NOT `plan` are pinned here by supplying them through `--artifact`.
+  const SUPPLIED_ENTRIES = [
+    { entry: 'review-replan', supply: ['baseline=plan.md'], steps: 11 },
+    { entry: 'review-task', supply: ['tasks=todo.md'], steps: 12 },
+    { entry: 'review-final', supply: ['requirements=plan.md'], steps: 14 },
+  ];
+
+  for (const { entry, supply, steps } of SUPPLIED_ENTRIES) {
+    test(`${entry}: required inputs supplied via --artifact walk every step`, async (t) => {
+      const dir = setupRepo(t);
+      const argv = ['exec', '--entry', entry];
+      for (const pair of supply) argv.push('--artifact', pair);
+
+      const stopped = await run(dir, ['exec', '--entry', entry]);
+      assert.deepEqual(tally(stopped.steps), { stopped: steps });
+
+      const walked = await run(dir, argv);
+      assert.equal(validate(walked), true, JSON.stringify(validate.errors));
+      assert.equal(walked.steps.length, steps);
+      // Every step is reached: no `stopped` record survives once the required
+      // inputs are proven. The exact split between not-implemented and skipped
+      // is the Flow's business, not this test's.
+      assert.equal(
+        walked.steps.filter((step) => step.outcome === 'stopped').length,
+        0,
+        JSON.stringify(tally(walked.steps))
+      );
+    });
+  }
+
   for (const { entry, required, steps, plain: plainTally, debug: debugTally } of CORE_ENTRIES) {
     test(`${entry}: schema-valid, step records per the expectation table, gate untouched`, async (t) => {
       const dir = setupRepo(t);
@@ -176,10 +210,11 @@ describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
     });
   }
 
-  test('review-plan --debug: every record is not-implemented or skipped, in document order', async (t) => {
+  test('review-plan with and without --debug: every record is not-implemented or skipped, in document order', async (t) => {
     const dir = setupRepo(t);
-    const artifact = await run(dir, ['exec', '--entry', 'review-plan', '--debug']);
-    const outcomes = artifact.steps.map((s) => s.outcome);
+    const plain = await run(dir, ['exec', '--entry', 'review-plan']);
+    const debug = await run(dir, ['exec', '--entry', 'review-plan', '--debug']);
+    const outcomes = plain.steps.map((s) => s.outcome);
     // plan-review.flow.json: 11 steps; the `when: design present` step is
     // skipped (design is not an artifact the fixture supplies), the rest have
     // no capability. derive-gate is a reserved primitive (also not-implemented).
@@ -196,11 +231,12 @@ describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
       'not-implemented',
       'not-implemented',
     ]);
-    assert.equal(artifact.steps[5].id, 'cross-artifact-review');
-    assert.match(artifact.steps[5].reason, /design/);
+    assert.deepEqual(debug.steps, plain.steps, '--debug must not affect runner input resolution');
+    assert.equal(plain.steps[5].id, 'cross-artifact-review');
+    assert.match(plain.steps[5].reason, /design/);
     // Parallel run tagging survives the copy: the two reviewer steps share run 0.
     assert.deepEqual(
-      artifact.steps.filter((s) => s.parallel).map((s) => [s.id, s.parallelRun]),
+      plain.steps.filter((s) => s.parallel).map((s) => [s.id, s.parallelRun]),
       [
         ['security-scanner', 0],
         ['test-gap', 0],

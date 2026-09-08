@@ -722,7 +722,8 @@ function toSelectedView(skill) {
  *   documented "no LLM call is ever made here" contract. The adjudicator is
  *   escalation-only: it can never overturn a HIGH-confidence regex verdict
  *   (see adjudicateHumanApproval).
- * @returns {Promise<object>} Review Artifact (schema version "1")
+ * @returns {Promise<object>} Review Artifact (schema version "1") with a
+ *   non-enumerable `resolved` resolver result for in-process callers.
  */
 export async function runReviewPlan({
   cwd = process.cwd(),
@@ -1040,6 +1041,14 @@ export async function runReviewPlan({
     },
   });
 
+  // Keep resolver state available to the CLI's Flow hand-off without adding it
+  // to the Review Artifact or making diagnostic output depend on `--debug`.
+  // Non-enumerability preserves the JSON artifact contract for all existing
+  // callers, including the no-`--entry` byte-identity guarantee.
+  Object.defineProperty(artifact, 'resolved', {
+    value: resolved,
+    enumerable: false,
+  });
   return artifact;
 }
 
