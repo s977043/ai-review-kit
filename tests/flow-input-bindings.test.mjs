@@ -52,6 +52,23 @@ describe('Flow input bindings', () => {
     assert.equal(defaultWins.inputSources.tests.id, 'junit');
   });
 
+  test('an explicit artifact that does not exist is not overridden by a default', () => {
+    // `--artifact tests=missing.xml` supplies no path, so guarding the default
+    // pass on `inputs` let `junit` take over: the documented order broke and
+    // the bound-artifact-missing reason disappeared.
+    const { inputs, inputSources } = resolveFlowInputBindings({
+      document,
+      resolved: {
+        tests: { id: 'tests', path: '/repo/missing.xml', source: 'cli', exists: false },
+        junit: resolution('junit'),
+      },
+    });
+    assert.equal(inputs.tests, undefined);
+    assert.equal(inputSources.tests.kind, 'explicit');
+    assert.equal(inputSources.tests.id, 'tests');
+    assert.equal(inputSources.tests.path, '/repo/missing.xml');
+  });
+
   test('declares the role-wide defaults and no entry-specific exceptions yet', () => {
     // `requirements` and `tasks` are deliberately absent: both are REQUIRED on
     // some Flows, so a default there would let a file that merely happens to
