@@ -46676,6 +46676,184 @@ async function loadAllSkillMetadata(options = {}) {
 
 /***/ }),
 
+/***/ 4281:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   Gg: () => (/* binding */ CWD_DEFAULTS),
+/* harmony export */   Vy: () => (/* binding */ resolveAllArtifacts)
+/* harmony export */ });
+/* unused harmony export resolveArtifact */
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(6760);
+/* harmony import */ var node_fs_promises__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1455);
+/**
+ * Artifact Input resolver — #802 Phase 2b
+ *
+ * Resolution order (per artifact-input-contract.md):
+ *   1. CLI arg     – path passed explicitly by the caller
+ *   2. config      – artifacts.<id> in river.config.*
+ *   3. cwd default – well-known filename in the working directory
+ *
+ * Pure module: no singleton state; fs is injectable.
+ * Scope: resolve path + existence check only.
+ * Content reading / skill injection / CLI parsing → Phase 3.
+ */
+
+
+
+
+// CWD default filenames (from artifact-input-contract.md)
+
+/** @type {Readonly<Record<string, string>>} */
+const CWD_DEFAULTS = Object.freeze({
+  'pbi-input': 'pbi-input.md',
+  plan: 'plan.md',
+  todo: 'todo.md',
+  'test-cases': 'test-cases.md',
+  'review-self': 'review-self.md',
+  'review-external': 'review-external.md',
+  diff: 'diff.patch',
+  junit: 'junit.xml',
+  coverage: 'coverage.xml',
+  lint: 'lint.json',
+  typecheck: 'typecheck.txt',
+  'findings-pool': 'findings-pool.json',
+  'tdd-ledger': 'tdd-ledger.json',
+});
+
+/**
+ * @typedef {'cli'|'config'|'cwd'} ArtifactSource
+ * @typedef {object} ArtifactResolution
+ * @property {string}              id
+ * @property {string|null}         path
+ * @property {ArtifactSource|null} source
+ * @property {boolean}             exists
+ * @property {boolean}             optional
+ */
+
+/**
+ * Resolve a single artifact path using the three-tier order.
+ *
+ * Path base: CLI → cwd; config → configDir ?? cwd; cwd-default → cwd.
+ *
+ * @param {object} opts
+ * @param {string} opts.id
+ * @param {string|null} [opts.cliArg]
+ * @param {string|{path:string,optional?:boolean}|null} [opts.configValue]
+ * @param {string} [opts.configDir]
+ * @param {string} [opts.cwd]
+ * @param {Pick<import('node:fs/promises'),'access'>} [opts.fsImpl]
+ * @returns {Promise<ArtifactResolution>}
+ */
+async function resolveArtifact({
+  id,
+  cliArg = null,
+  configValue = null,
+  configDir,
+  cwd = process.cwd(),
+  fsImpl = node_fs_promises__WEBPACK_IMPORTED_MODULE_1__,
+}) {
+  // Tier 1: CLI arg
+  if (cliArg != null && cliArg !== '') {
+    const resolved = node_path__WEBPACK_IMPORTED_MODULE_0__.resolve(cwd, cliArg);
+    const exists = await _fileExists(resolved, fsImpl);
+    return { id, path: resolved, source: 'cli', exists, optional: false };
+  }
+
+  // Tier 2: config value
+  if (configValue != null) {
+    const base = configDir ?? cwd;
+    const { rawPath, optional } = _normalizeConfigValue(configValue);
+    if (rawPath) {
+      const resolved = node_path__WEBPACK_IMPORTED_MODULE_0__.resolve(base, rawPath);
+      const exists = await _fileExists(resolved, fsImpl);
+      return { id, path: resolved, source: 'config', exists, optional: optional ?? false };
+    }
+  }
+
+  // Tier 3: cwd default (only if the file exists)
+  const defaultName = CWD_DEFAULTS[id];
+  if (defaultName) {
+    const resolved = node_path__WEBPACK_IMPORTED_MODULE_0__.resolve(cwd, defaultName);
+    const exists = await _fileExists(resolved, fsImpl);
+    if (exists) {
+      return { id, path: resolved, source: 'cwd', exists: true, optional: true };
+    }
+  }
+
+  // Not found
+  return { id, path: null, source: null, exists: false, optional: true };
+}
+
+/**
+ * Resolve all artifact IDs in parallel.
+ *
+ * The ID set is the union of the contract's known IDs (CWD_DEFAULTS) plus
+ * any IDs explicitly named via cliArgs or configArtifacts. Explicitly
+ * named IDs are never silently dropped — this keeps the resolver
+ * consistent with the Phase 2a schema, which accepts unknown artifact
+ * keys via `.catchall` so the contract can add IDs in a
+ * backward-compatible minor bump. cwd-default lookup still only applies
+ * to known IDs (CWD_DEFAULTS); an unknown ID resolves only if supplied
+ * via CLI/config, otherwise it reports path:null/source:null.
+ *
+ * @param {object} [opts]
+ * @param {Record<string,string>} [opts.cliArgs]
+ * @param {Record<string,string|{path:string,optional?:boolean}>} [opts.configArtifacts]
+ * @param {string} [opts.configDir]
+ * @param {string} [opts.cwd]
+ * @param {Pick<import('node:fs/promises'),'access'>} [opts.fsImpl]
+ * @returns {Promise<Record<string, ArtifactResolution>>}
+ */
+async function resolveAllArtifacts({
+  cliArgs = {},
+  configArtifacts = {},
+  configDir,
+  cwd,
+  fsImpl,
+} = {}) {
+  const ids = new Set([
+    ...Object.keys(CWD_DEFAULTS),
+    ...Object.keys(cliArgs),
+    ...Object.keys(configArtifacts),
+  ]);
+  const entries = await Promise.all(
+    [...ids].map((id) =>
+      resolveArtifact({
+        id,
+        cliArg: cliArgs[id] ?? null,
+        configValue: configArtifacts[id] ?? null,
+        configDir,
+        cwd,
+        fsImpl,
+      }).then((r) => [id, r])
+    )
+  );
+  return Object.fromEntries(entries);
+}
+
+// Internal helpers
+
+function _normalizeConfigValue(value) {
+  if (typeof value === 'string') return { rawPath: value || null, optional: false };
+  if (value && typeof value === 'object') {
+    return { rawPath: value.path || null, optional: value.optional ?? false };
+  }
+  return { rawPath: null, optional: false };
+}
+
+async function _fileExists(filePath, fsImpl) {
+  try {
+    await fsImpl.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+
+/***/ }),
+
 /***/ 4807:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -60821,12 +60999,16 @@ var expires_at = __nccwpck_require__(5009);
 var flow_loader = __nccwpck_require__(4357);
 // EXTERNAL MODULE: ./src/lib/diff-processor.mjs
 var diff_processor = __nccwpck_require__(861);
+// EXTERNAL MODULE: ./src/config/artifact-resolver.mjs
+var artifact_resolver = __nccwpck_require__(4281);
 ;// CONCATENATED MODULE: ./src/lib/flow-input-bindings.mjs
 // Flow input bindings (Epic #2011 AC7 P3-2).
 //
 // Flow inputs describe review roles while Artifact Input Contract IDs describe
 // concrete files. This module is the CLI-side SSoT that connects the two;
 // Flow documents intentionally carry no host vocabulary.
+
+
 
 /**
  * Role-wide default artifact IDs, in selection order.
@@ -60883,7 +61065,7 @@ function resolvedArtifact(resolved, id) {
  * @param {string|null} [options.entry] Flow entry name, for exceptional bindings
  * @param {object} options.document resolved Flow document
  * @param {Record<string, {exists?: boolean, path?: string, source?: string}>} [options.resolved]
- * @returns {{inputs: Record<string, string>, inputSources: Record<string, {kind: 'explicit'|'direct'|'default', id: string, source: string|null}>}}
+ * @returns {{inputs: Record<string, string>, inputSources: Record<string, {kind: 'explicit'|'direct'|'default', id: string, source: string|null, path?: string}>, unboundInputNames: string[]}}
  */
 function resolveFlowInputBindings({ entry = null, document, resolved = {} }) {
   const names = declaredInputNames(document);
@@ -60893,13 +61075,14 @@ function resolveFlowInputBindings({ entry = null, document, resolved = {} }) {
   // Preserve P3-1's same-named resolution and make it take precedence over
   // role defaults. A CLI-sourced direct ID is the explicit supply contract.
   for (const name of [...names].sort()) {
-    const artifact = resolvedArtifact(resolved, name);
-    if (!artifact) continue;
-    inputs[name] = artifact.path;
+    const resolution = resolved?.[name];
+    if (!resolution || typeof resolution.path !== 'string' || !resolution.path) continue;
+    if (resolution.exists === true) inputs[name] = resolution.path;
     inputSources[name] = {
-      kind: artifact.source === 'cli' ? 'explicit' : 'direct',
+      kind: resolution.source === 'cli' ? 'explicit' : 'direct',
       id: name,
-      source: artifact.source ?? null,
+      source: resolution.source ?? null,
+      ...(resolution.exists === true ? {} : { path: resolution.path }),
     };
   }
 
@@ -60917,9 +61100,33 @@ function resolveFlowInputBindings({ entry = null, document, resolved = {} }) {
       inputSources[name] = { kind: 'default', id, source: artifact.source ?? null };
       break;
     }
+    if (name in inputSources) continue;
+
+    // An explicit/configured candidate that does not exist still tells the
+    // user exactly which intended file is absent. Only fall back to a CWD
+    // default after all existing candidates have had their chance to bind.
+    for (const id of candidates) {
+      const resolution = resolved?.[id];
+      if (typeof resolution?.path !== 'string' || !resolution.path) continue;
+      inputSources[name] = {
+        kind: 'default',
+        id,
+        source: resolution.source ?? null,
+        path: resolution.path,
+      };
+      break;
+    }
+    if (name in inputSources) continue;
+
+    const id = candidates.find((candidate) => artifact_resolver/* CWD_DEFAULTS */.Gg[candidate]);
+    if (id) inputSources[name] = { kind: 'default', id, source: null, path: artifact_resolver/* CWD_DEFAULTS */.Gg[id] };
   }
 
-  return { inputs, inputSources };
+  return {
+    inputs,
+    inputSources,
+    unboundInputNames: [...names].filter((name) => !(name in inputSources)).sort(),
+  };
 }
 
 ;// CONCATENATED MODULE: ./src/cli/commands/review.mjs
@@ -60993,16 +61200,24 @@ async function resolveBaseRepoDiff(parsed) {
  * @param {Record<string, unknown>|undefined} resolved - Resolver result from
  *   the plan execution; unavailable on replay.
  * @param {object} document - the resolved Flow document (`inputs[]` names).
- * @returns {Record<string, unknown>}
+ * @returns {{inputs: Record<string, unknown>, inputSources: Record<string, unknown>, unboundInputNames: string[]}}
  */
 function resolvedFlowInputs(artifact, entry, document, resolved) {
-  const { inputs } = resolveFlowInputBindings({ entry, document, resolved });
+  const { inputs, inputSources, unboundInputNames } = resolveFlowInputBindings({
+    entry,
+    document,
+    resolved,
+  });
   const declaresDiff =
     Array.isArray(document?.inputs) && document.inputs.some((input) => input?.name === 'diff');
   if (declaresDiff && !('diff' in inputs) && Array.isArray(artifact?.context?.changedFiles)) {
     inputs.diff = artifact.context.changedFiles;
   }
-  return inputs;
+  if ('diff' in inputs) {
+    const index = unboundInputNames.indexOf('diff');
+    if (index !== -1) unboundInputNames.splice(index, 1);
+  }
+  return { inputs, inputSources, unboundInputNames };
 }
 
 /**
@@ -61058,7 +61273,7 @@ async function runReviewCommand(parsed) {
   }
   try {
     const { runReviewPlan, runReviewExecReplay, ReviewPlanError, resolveReviewOutputFormat } =
-      await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
+      await __nccwpck_require__.e(/* import() */ 209).then(__nccwpck_require__.bind(__nccwpck_require__, 9209));
     let reviewFormat;
     try {
       reviewFormat = resolveReviewOutputFormat(parsed);
@@ -61196,10 +61411,16 @@ async function runReviewCommand(parsed) {
     // review, so there is nothing for a step to record.
     if (resolvedFlow !== null && isExecExecute) {
       const { executeFlow } = await __nccwpck_require__.e(/* import() */ 550).then(__nccwpck_require__.bind(__nccwpck_require__, 5550));
+      const flowInputs = resolvedFlowInputs(
+        artifact,
+        parsed.entry,
+        resolvedFlow.document,
+        resolved
+      );
       const result = await executeFlow({
         document: resolvedFlow.document,
         capabilities: {},
-        inputs: resolvedFlowInputs(artifact, parsed.entry, resolvedFlow.document, resolved),
+        ...flowInputs,
         // Record only: `observe` continues past a missing capability as
         // `not-implemented` and lists every step even when a required input
         // is missing. `judgment` is reserved for P4 and not passed here.
@@ -61292,7 +61513,7 @@ async function runReviewCommand(parsed) {
 async function runReviewVerify(parsed) {
   try {
     const { ReviewPlanError, resolveReviewOutputFormat } =
-      await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
+      await __nccwpck_require__.e(/* import() */ 209).then(__nccwpck_require__.bind(__nccwpck_require__, 9209));
     try {
       resolveReviewOutputFormat(parsed);
     } catch (err) {

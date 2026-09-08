@@ -24,7 +24,7 @@
 //
 // Contract:
 //   executeFlow({ document, capabilities = {}, inputs = {}, judgment = {},
-//                 mode = 'observe' })
+//                 inputSources?, unboundInputNames?, mode = 'observe' })
 //     -> { steps: StepOutcome[], stopped: boolean, stopReason?: GateReasonCode,
 //          missingInputs: string[], mode }
 //
@@ -237,6 +237,16 @@ function declaredInputNames(document) {
  * @param {'observe'|'execute'} [params.mode]  `observe` (default) records a
  *   missing capability as `not-implemented` and continues; `execute` treats
  *   it as unsatisfied per `onUnsatisfied`.
+ * @param {Record<string, {id?: string, path?: string}>} [params.inputSources]
+ *   Optional CLI binding metadata, ignored when it is not a plain object. Only
+ *   the artifact `id` reaches the reason text: the resolved `path` stays out of
+ *   the Review Artifact, which is written to `--output-file` and echoed by the
+ *   Action. When a role is both unbound and bound-but-missing, unbound wins,
+ *   because that is the case the user can act on without guessing a path.
+ *   When supplied with `unboundInputNames`, it
+ *   makes a missing required input's user-facing reason actionable.
+ * @param {string[]} [params.unboundInputNames] Optional names with no binding,
+ *   ignored when it is not an array.
  * @returns {Promise<{ steps: object[], stopped: boolean, stopReason?: string, missingInputs: string[], mode: string }>}
  */
 export async function executeFlow({
@@ -244,6 +254,8 @@ export async function executeFlow({
   capabilities = {},
   inputs = {},
   judgment = {},
+  inputSources,
+  unboundInputNames,
   mode = 'observe',
 } = {}) {
   if (!isPlainObject(document) || !Array.isArray(document.steps)) {
@@ -258,6 +270,13 @@ export async function executeFlow({
   if (!isPlainObject(judgment)) {
     throw new FlowRunnerError('executeFlow: "judgment" must be an object.');
   }
+  // These two are OPTIONAL diagnostics, not part of the execution contract: a
+  // caller that passes a wrong shape gets the generic reason, not an exception.
+  // Throwing here would have been a backward-compatibility break, since every
+  // one of these values was an ignored extra property before this argument
+  // existed (#2011 AC7 P3-3 review).
+  const bindingSources = isPlainObject(inputSources) ? inputSources : undefined;
+  const unboundNames = Array.isArray(unboundInputNames) ? unboundInputNames : undefined;
   if (!FLOW_RUN_MODES.includes(mode)) {
     throw new FlowRunnerError(
       `executeFlow: unknown mode "${mode}" (expected ${FLOW_RUN_MODES.join(' | ')}).`
@@ -265,6 +284,12 @@ export async function executeFlow({
   }
 
   const inputMap = normalisedEntries(inputs);
+  const inputSourceMap = bindingSources === undefined ? null : normalisedEntries(bindingSources);
+  const unboundInputSet = new Set(
+    (unboundNames ?? [])
+      .filter((name) => typeof name === 'string')
+      .map((name) => name.normalize('NFC'))
+  );
   const capabilityMap = normalisedEntries(capabilities);
   const declaredInputs = declaredInputNames(document);
   const observe = mode === 'observe';
@@ -272,6 +297,29 @@ export async function executeFlow({
   const missingInputs = requiredInputNames(document).filter(
     (name) => !isInputPresent(inputMap, name)
   );
+  const missingInputReason = () => {
+    // The optional metadata is deliberately opt-in: direct callers that omit
+    // it retain P1's exact reason text.
+    if (inputSourceMap === null && unboundNames === undefined) {
+      return `required input missing: ${missingInputs.join(', ')}`;
+    }
+    return missingInputs
+      .map((name) => {
+        if (unboundInputSet.has(name.normalize('NFC'))) {
+          return `input not bound: ${name}; supply it with --artifact ${name}=<path>`;
+        }
+        const source = inputSourceMap?.get(name);
+        if (source && typeof source === 'object' && typeof source.id === 'string') {
+          // Report the artifact ID, never the resolved path. The Review
+          // Artifact is written to `--output-file` and echoed by the Action, so
+          // an absolute path here would carry the user's directory layout into
+          // an externally shared document (#2011 AC7 P3-3 review).
+          return `bound artifact missing: ${source.id}`;
+        }
+        return `required input missing: ${name}`;
+      })
+      .join('; ');
+  };
   const steps = [];
   const stoppedResult = (stopReason) => ({ steps, stopped: true, stopReason, missingInputs, mode });
   let parallelRun = -1;
@@ -293,7 +341,7 @@ export async function executeFlow({
     // `steps` empty: its purpose is the list of what WOULD have run, so every
     // step is enumerated in Flow order, each recorded as `stopped`.
     if (observe) {
-      const reason = `required input missing: ${missingInputs.join(', ')}`;
+      const reason = missingInputReason();
       for (let index = 0; index < document.steps.length; index += 1) {
         steps.push({ ...describe(index).record, outcome: 'stopped', reason });
       }
