@@ -60876,15 +60876,15 @@ async function resolveBaseRepoDiff(parsed) {
 }
 
 /**
- * Flow inputs the artifact itself proves were supplied, keyed by Flow input
+ * Flow inputs the plan execution proves were supplied, keyed by Flow input
  * name, for `executeFlow`'s required-input check and `when` clauses (Epic
- * #2011 AC7 P2). Two sources, both already in the artifact:
+ * #2011 AC7 P3-1). Two sources:
  *
  *   - `context.changedFiles` exists only when the review diff resolved
  *     (review-plan.mjs sets `context` under `diffResolved`), so it stands for
  *     the Flow input `diff`.
- *   - `debug.resolvedArtifacts` (present under `--debug` only) lists every
- *     artifact ID with an `exists` flag. Only IDs that ARE a Flow input name
+ *   - `resolved` is the resolver result returned by `runReviewPlan`. Only IDs
+ *     that ARE a Flow input name
  *     (`plan`, `diff`) are taken; no ID-to-input mapping is invented here —
  *     `todo` is not claimed as `tasks`, `pbi-input` not as `requirements`.
  *
@@ -60894,10 +60894,12 @@ async function resolveBaseRepoDiff(parsed) {
  * the capability phase's job.
  *
  * @param {Record<string, unknown>} artifact
+ * @param {Record<string, unknown>|undefined} resolved - Resolver result from
+ *   the plan execution; unavailable on replay.
  * @param {object} document - the resolved Flow document (`inputs[]` names).
  * @returns {Record<string, unknown>}
  */
-function resolvedFlowInputs(artifact, document) {
+function resolvedFlowInputs(artifact, document, resolved) {
   const names = new Set(
     (Array.isArray(document?.inputs) ? document.inputs : [])
       .map((input) => input?.name)
@@ -60907,7 +60909,6 @@ function resolvedFlowInputs(artifact, document) {
   if (names.has('diff') && Array.isArray(artifact?.context?.changedFiles)) {
     inputs.diff = artifact.context.changedFiles;
   }
-  const resolved = artifact?.debug?.resolvedArtifacts;
   if (resolved && typeof resolved === 'object') {
     for (const id of Object.keys(resolved).sort()) {
       if (names.has(id) && resolved[id]?.exists === true && resolved[id]?.path) {
@@ -61029,6 +61030,7 @@ async function runReviewCommand(parsed) {
       };
     }
     let artifact;
+    let resolved;
     try {
       if (isExecPlanReplay) {
         artifact = await runReviewExecReplay({
@@ -61064,6 +61066,7 @@ async function runReviewCommand(parsed) {
           availableDependencies: parsed.availableDependencies ?? undefined,
           diffOverride,
         });
+        resolved = artifact.resolved;
       }
     } catch (err) {
       if (err instanceof ReviewPlanError) {
@@ -61110,7 +61113,7 @@ async function runReviewCommand(parsed) {
       const result = await executeFlow({
         document: resolvedFlow.document,
         capabilities: {},
-        inputs: resolvedFlowInputs(artifact, resolvedFlow.document),
+        inputs: resolvedFlowInputs(artifact, resolvedFlow.document, resolved),
         // Record only: `observe` continues past a missing capability as
         // `not-implemented` and lists every step even when a required input
         // is missing. `judgment` is reserved for P4 and not passed here.
