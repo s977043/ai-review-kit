@@ -149,6 +149,20 @@ function assertStepRecords(artifact, entry, expectedCount, expectedTally) {
 }
 
 describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
+  test('required unbound roles name the required --artifact supply', async (t) => {
+    const dir = setupRepo(t);
+    for (const entry of ['review-design', 'review-task']) {
+      const artifact = await run(dir, ['exec', '--entry', entry]);
+      const missing = entry === 'review-design' ? 'design' : 'tasks';
+      for (const step of artifact.steps) {
+        assert.equal(
+          step.reason,
+          `input not bound: ${missing}; supply it with --artifact ${missing}=<path>`
+        );
+      }
+    }
+  });
+
   test('step record vocabularies exactly match the artifact schema', () => {
     const schemaStep = SCHEMA.properties.steps.items.properties;
     assert.deepEqual([...schemaStep.outcome.enum].sort(), [...OUTCOMES].sort());

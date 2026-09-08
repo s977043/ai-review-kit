@@ -66,7 +66,7 @@ describe('Flow input bindings', () => {
     // `tasks` is required on task-completion-review and `requirements` on
     // final-review / requirements-review. A working tree that happens to hold
     // `todo.md` or `pbi-input.md` must not satisfy them.
-    const { inputs, inputSources } = resolveFlowInputBindings({
+    const { inputs, inputSources, unboundInputNames } = resolveFlowInputBindings({
       document,
       resolved: {
         'pbi-input': resolution('pbi-input'),
@@ -77,6 +77,7 @@ describe('Flow input bindings', () => {
     assert.equal(inputs.tasks, undefined);
     assert.equal(inputSources.requirements, undefined);
     assert.equal(inputSources.tasks, undefined);
+    assert.deepEqual(unboundInputNames, ['plan', 'requirements', 'tasks']);
   });
 
   test('an explicitly supplied required role is still honoured', () => {
@@ -101,6 +102,15 @@ describe('Flow input bindings', () => {
     assert.deepEqual(result.inputSources.tests, { kind: 'default', id: 'junit', source: 'cwd' });
   });
 
+  test('uses a later available candidate instead of treating an earlier default filename as missing', () => {
+    const result = resolveFlowInputBindings({
+      document,
+      resolved: { coverage: resolution('coverage') },
+    });
+    assert.equal(result.inputs.tests, '/repo/coverage');
+    assert.deepEqual(result.inputSources.tests, { kind: 'default', id: 'coverage', source: 'cwd' });
+  });
+
   test('an explicit same-named CLI artifact wins over the default binding', () => {
     const result = resolveFlowInputBindings({
       document,
@@ -110,14 +120,34 @@ describe('Flow input bindings', () => {
     assert.deepEqual(result.inputSources.tasks, { kind: 'explicit', id: 'tasks', source: 'cli' });
   });
 
-  test('does not bind undeclared roles or missing artifacts', () => {
+  test('reports a missing default target as bound while leaving a role without a table entry unbound', () => {
     const result = resolveFlowInputBindings({
-      document: { inputs: [{ name: 'design' }] },
+      document: { inputs: [{ name: 'design' }, { name: 'tests' }] },
       resolved: {
         todo: resolution('todo'),
         'pbi-input': { exists: false, path: '/repo/pbi-input' },
       },
     });
-    assert.deepEqual(result, { inputs: {}, inputSources: {} });
+    assert.deepEqual(result, {
+      inputs: {},
+      inputSources: {
+        tests: { kind: 'default', id: 'junit', source: null, path: 'junit.xml' },
+      },
+      unboundInputNames: ['design'],
+    });
+  });
+
+  test('keeps an explicit missing path as a binding so callers can tell it from no binding', () => {
+    const result = resolveFlowInputBindings({
+      document: { inputs: [{ name: 'tasks' }] },
+      resolved: { tasks: { exists: false, path: '/repo/missing-tasks.md', source: 'cli' } },
+    });
+    assert.deepEqual(result, {
+      inputs: {},
+      inputSources: {
+        tasks: { kind: 'explicit', id: 'tasks', source: 'cli', path: '/repo/missing-tasks.md' },
+      },
+      unboundInputNames: [],
+    });
   });
 });

@@ -148,6 +148,36 @@ describe('flow-runner: shipped Flow documents', () => {
 });
 
 describe('flow-runner: required inputs', () => {
+  test('optional binding metadata separates an unbound role from a missing bound artifact', async () => {
+    const document = {
+      id: 'input-reasons',
+      inputs: [
+        { name: 'design', required: true },
+        { name: 'tests', required: true },
+      ],
+      steps: [{ use: 'resolve-intent' }],
+    };
+    const result = await executeFlow({
+      document,
+      inputSources: { tests: { id: 'junit', path: 'junit.xml' } },
+      unboundInputNames: ['design'],
+    });
+    assert.equal(
+      result.steps[0].reason,
+      'input not bound: design; supply it with --artifact design=<path>; bound artifact missing: junit (junit.xml)'
+    );
+  });
+
+  test('omitting optional binding metadata preserves the original missing-input reason', async () => {
+    const document = {
+      id: 'legacy-input-reason',
+      inputs: [{ name: 'design', required: true }],
+      steps: [{ use: 'resolve-intent' }],
+    };
+    const result = await executeFlow({ document });
+    assert.equal(result.steps[0].reason, 'required input missing: design');
+  });
+
   test('a missing required input stops before the first step', async () => {
     const withRequired = flows.filter(({ document }) =>
       (document.inputs ?? []).some((input) => input.required === true)

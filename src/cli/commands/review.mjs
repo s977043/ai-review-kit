@@ -73,16 +73,24 @@ async function resolveBaseRepoDiff(parsed) {
  * @param {Record<string, unknown>|undefined} resolved - Resolver result from
  *   the plan execution; unavailable on replay.
  * @param {object} document - the resolved Flow document (`inputs[]` names).
- * @returns {Record<string, unknown>}
+ * @returns {{inputs: Record<string, unknown>, inputSources: Record<string, unknown>, unboundInputNames: string[]}}
  */
 function resolvedFlowInputs(artifact, entry, document, resolved) {
-  const { inputs } = resolveFlowInputBindings({ entry, document, resolved });
+  const { inputs, inputSources, unboundInputNames } = resolveFlowInputBindings({
+    entry,
+    document,
+    resolved,
+  });
   const declaresDiff =
     Array.isArray(document?.inputs) && document.inputs.some((input) => input?.name === 'diff');
   if (declaresDiff && !('diff' in inputs) && Array.isArray(artifact?.context?.changedFiles)) {
     inputs.diff = artifact.context.changedFiles;
   }
-  return inputs;
+  if ('diff' in inputs) {
+    const index = unboundInputNames.indexOf('diff');
+    if (index !== -1) unboundInputNames.splice(index, 1);
+  }
+  return { inputs, inputSources, unboundInputNames };
 }
 
 /**
@@ -276,10 +284,16 @@ export async function runReviewCommand(parsed) {
     // review, so there is nothing for a step to record.
     if (resolvedFlow !== null && isExecExecute) {
       const { executeFlow } = await import('../../lib/flow-runner.mjs');
+      const flowInputs = resolvedFlowInputs(
+        artifact,
+        parsed.entry,
+        resolvedFlow.document,
+        resolved
+      );
       const result = await executeFlow({
         document: resolvedFlow.document,
         capabilities: {},
-        inputs: resolvedFlowInputs(artifact, parsed.entry, resolvedFlow.document, resolved),
+        ...flowInputs,
         // Record only: `observe` continues past a missing capability as
         // `not-implemented` and lists every step even when a required input
         // is missing. `judgment` is reserved for P4 and not passed here.

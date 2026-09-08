@@ -4,6 +4,8 @@
 // concrete files. This module is the CLI-side SSoT that connects the two;
 // Flow documents intentionally carry no host vocabulary.
 
+import { CWD_DEFAULTS } from '../config/artifact-resolver.mjs';
+
 /**
  * Role-wide default artifact IDs, in selection order.
  *
@@ -59,7 +61,7 @@ function resolvedArtifact(resolved, id) {
  * @param {string|null} [options.entry] Flow entry name, for exceptional bindings
  * @param {object} options.document resolved Flow document
  * @param {Record<string, {exists?: boolean, path?: string, source?: string}>} [options.resolved]
- * @returns {{inputs: Record<string, string>, inputSources: Record<string, {kind: 'explicit'|'direct'|'default', id: string, source: string|null}>}}
+ * @returns {{inputs: Record<string, string>, inputSources: Record<string, {kind: 'explicit'|'direct'|'default', id: string, source: string|null, path?: string}>, unboundInputNames: string[]}}
  */
 export function resolveFlowInputBindings({ entry = null, document, resolved = {} }) {
   const names = declaredInputNames(document);
@@ -69,13 +71,14 @@ export function resolveFlowInputBindings({ entry = null, document, resolved = {}
   // Preserve P3-1's same-named resolution and make it take precedence over
   // role defaults. A CLI-sourced direct ID is the explicit supply contract.
   for (const name of [...names].sort()) {
-    const artifact = resolvedArtifact(resolved, name);
-    if (!artifact) continue;
-    inputs[name] = artifact.path;
+    const resolution = resolved?.[name];
+    if (!resolution || typeof resolution.path !== 'string' || !resolution.path) continue;
+    if (resolution.exists === true) inputs[name] = resolution.path;
     inputSources[name] = {
-      kind: artifact.source === 'cli' ? 'explicit' : 'direct',
+      kind: resolution.source === 'cli' ? 'explicit' : 'direct',
       id: name,
-      source: artifact.source ?? null,
+      source: resolution.source ?? null,
+      ...(resolution.exists === true ? {} : { path: resolution.path }),
     };
   }
 
@@ -93,7 +96,31 @@ export function resolveFlowInputBindings({ entry = null, document, resolved = {}
       inputSources[name] = { kind: 'default', id, source: artifact.source ?? null };
       break;
     }
+    if (name in inputSources) continue;
+
+    // An explicit/configured candidate that does not exist still tells the
+    // user exactly which intended file is absent. Only fall back to a CWD
+    // default after all existing candidates have had their chance to bind.
+    for (const id of candidates) {
+      const resolution = resolved?.[id];
+      if (typeof resolution?.path !== 'string' || !resolution.path) continue;
+      inputSources[name] = {
+        kind: 'default',
+        id,
+        source: resolution.source ?? null,
+        path: resolution.path,
+      };
+      break;
+    }
+    if (name in inputSources) continue;
+
+    const id = candidates.find((candidate) => CWD_DEFAULTS[candidate]);
+    if (id) inputSources[name] = { kind: 'default', id, source: null, path: CWD_DEFAULTS[id] };
   }
 
-  return { inputs, inputSources };
+  return {
+    inputs,
+    inputSources,
+    unboundInputNames: [...names].filter((name) => !(name in inputSources)).sort(),
+  };
 }

@@ -24,7 +24,7 @@
 //
 // Contract:
 //   executeFlow({ document, capabilities = {}, inputs = {}, judgment = {},
-//                 mode = 'observe' })
+//                 inputSources?, unboundInputNames?, mode = 'observe' })
 //     -> { steps: StepOutcome[], stopped: boolean, stopReason?: GateReasonCode,
 //          missingInputs: string[], mode }
 //
@@ -237,6 +237,10 @@ function declaredInputNames(document) {
  * @param {'observe'|'execute'} [params.mode]  `observe` (default) records a
  *   missing capability as `not-implemented` and continues; `execute` treats
  *   it as unsatisfied per `onUnsatisfied`.
+ * @param {Record<string, {id?: string, path?: string}>} [params.inputSources]
+ *   Optional CLI binding metadata. When supplied with `unboundInputNames`, it
+ *   makes a missing required input's user-facing reason actionable.
+ * @param {string[]} [params.unboundInputNames] Optional names with no binding.
  * @returns {Promise<{ steps: object[], stopped: boolean, stopReason?: string, missingInputs: string[], mode: string }>}
  */
 export async function executeFlow({
@@ -244,6 +248,8 @@ export async function executeFlow({
   capabilities = {},
   inputs = {},
   judgment = {},
+  inputSources,
+  unboundInputNames,
   mode = 'observe',
 } = {}) {
   if (!isPlainObject(document) || !Array.isArray(document.steps)) {
@@ -258,6 +264,12 @@ export async function executeFlow({
   if (!isPlainObject(judgment)) {
     throw new FlowRunnerError('executeFlow: "judgment" must be an object.');
   }
+  if (inputSources !== undefined && !isPlainObject(inputSources)) {
+    throw new FlowRunnerError('executeFlow: "inputSources" must be an object when supplied.');
+  }
+  if (unboundInputNames !== undefined && !Array.isArray(unboundInputNames)) {
+    throw new FlowRunnerError('executeFlow: "unboundInputNames" must be an array when supplied.');
+  }
   if (!FLOW_RUN_MODES.includes(mode)) {
     throw new FlowRunnerError(
       `executeFlow: unknown mode "${mode}" (expected ${FLOW_RUN_MODES.join(' | ')}).`
@@ -265,6 +277,12 @@ export async function executeFlow({
   }
 
   const inputMap = normalisedEntries(inputs);
+  const inputSourceMap = inputSources === undefined ? null : normalisedEntries(inputSources);
+  const unboundInputSet = new Set(
+    (unboundInputNames ?? [])
+      .filter((name) => typeof name === 'string')
+      .map((name) => name.normalize('NFC'))
+  );
   const capabilityMap = normalisedEntries(capabilities);
   const declaredInputs = declaredInputNames(document);
   const observe = mode === 'observe';
@@ -272,6 +290,26 @@ export async function executeFlow({
   const missingInputs = requiredInputNames(document).filter(
     (name) => !isInputPresent(inputMap, name)
   );
+  const missingInputReason = () => {
+    // The optional metadata is deliberately opt-in: direct callers that omit
+    // it retain P1's exact reason text.
+    if (inputSourceMap === null && unboundInputNames === undefined) {
+      return `required input missing: ${missingInputs.join(', ')}`;
+    }
+    return missingInputs
+      .map((name) => {
+        if (unboundInputSet.has(name.normalize('NFC'))) {
+          return `input not bound: ${name}; supply it with --artifact ${name}=<path>`;
+        }
+        const source = inputSourceMap?.get(name);
+        if (source && typeof source === 'object' && typeof source.id === 'string') {
+          const path = typeof source.path === 'string' && source.path ? ` (${source.path})` : '';
+          return `bound artifact missing: ${source.id}${path}`;
+        }
+        return `required input missing: ${name}`;
+      })
+      .join('; ');
+  };
   const steps = [];
   const stoppedResult = (stopReason) => ({ steps, stopped: true, stopReason, missingInputs, mode });
   let parallelRun = -1;
@@ -293,7 +331,7 @@ export async function executeFlow({
     // `steps` empty: its purpose is the list of what WOULD have run, so every
     // step is enumerated in Flow order, each recorded as `stopped`.
     if (observe) {
-      const reason = `required input missing: ${missingInputs.join(', ')}`;
+      const reason = missingInputReason();
       for (let index = 0; index < document.steps.length; index += 1) {
         steps.push({ ...describe(index).record, outcome: 'stopped', reason });
       }
