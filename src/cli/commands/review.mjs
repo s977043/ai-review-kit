@@ -13,6 +13,7 @@ import {
   resolveBaseMergeBase,
 } from '../../lib/git.mjs';
 import { collectRepoDiff } from '../../lib/diff-processor.mjs';
+import { resolveFlowInputBindings } from '../../lib/flow-input-bindings.mjs';
 import { SkillLoaderError, resolveSkillSet } from '../../../runners/core/skill-loader.mjs';
 
 /**
@@ -64,15 +65,9 @@ async function resolveBaseRepoDiff(parsed) {
  *   - `context.changedFiles` exists only when the review diff resolved
  *     (review-plan.mjs sets `context` under `diffResolved`), so it stands for
  *     the Flow input `diff`.
- *   - `resolved` is the resolver result returned by `runReviewPlan`. Only IDs
- *     that ARE a Flow input name
- *     (`plan`, `diff`) are taken; no ID-to-input mapping is invented here —
- *     `todo` is not claimed as `tasks`, `pbi-input` not as `requirements`.
- *
- * Everything else is absent, so a Flow whose required inputs the artifact
- * cannot vouch for is recorded (observe mode) as every step `stopped`; that
- * is the honest record, not a defect. Wiring the resolver's full input set is
- * the capability phase's job.
+ *   - `resolved` is the resolver result returned by `runReviewPlan`. The
+ *     CLI-side binding SSoT maps compatible contract IDs to Flow roles while
+ *     preserving direct CLI input precedence.
  *
  * @param {Record<string, unknown>} artifact
  * @param {Record<string, unknown>|undefined} resolved - Resolver result from
@@ -80,22 +75,12 @@ async function resolveBaseRepoDiff(parsed) {
  * @param {object} document - the resolved Flow document (`inputs[]` names).
  * @returns {Record<string, unknown>}
  */
-function resolvedFlowInputs(artifact, document, resolved) {
-  const names = new Set(
-    (Array.isArray(document?.inputs) ? document.inputs : [])
-      .map((input) => input?.name)
-      .filter((name) => typeof name === 'string')
-  );
-  const inputs = {};
-  if (names.has('diff') && Array.isArray(artifact?.context?.changedFiles)) {
+function resolvedFlowInputs(artifact, entry, document, resolved) {
+  const { inputs } = resolveFlowInputBindings({ entry, document, resolved });
+  const declaresDiff =
+    Array.isArray(document?.inputs) && document.inputs.some((input) => input?.name === 'diff');
+  if (declaresDiff && !('diff' in inputs) && Array.isArray(artifact?.context?.changedFiles)) {
     inputs.diff = artifact.context.changedFiles;
-  }
-  if (resolved && typeof resolved === 'object') {
-    for (const id of Object.keys(resolved).sort()) {
-      if (names.has(id) && resolved[id]?.exists === true && resolved[id]?.path) {
-        inputs[id] = resolved[id].path;
-      }
-    }
   }
   return inputs;
 }
@@ -294,7 +279,7 @@ export async function runReviewCommand(parsed) {
       const result = await executeFlow({
         document: resolvedFlow.document,
         capabilities: {},
-        inputs: resolvedFlowInputs(artifact, resolvedFlow.document, resolved),
+        inputs: resolvedFlowInputs(artifact, parsed.entry, resolvedFlow.document, resolved),
         // Record only: `observe` continues past a missing capability as
         // `not-implemented` and lists every step even when a required input
         // is missing. `judgment` is reserved for P4 and not passed here.

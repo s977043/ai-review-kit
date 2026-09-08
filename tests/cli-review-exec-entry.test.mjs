@@ -51,10 +51,11 @@ const OUTCOMES = new Set(['executed', 'skipped', 'degraded', 'stopped', 'not-imp
 const KINDS = new Set(['primitive', 'reviewer']);
 const validate = compileReviewArtifactValidator();
 
-// The fixture repo supplies plan.md, todo.md and diff.patch. What the artifact
-// can prove as Flow inputs: `diff` always (context.changedFiles), `plan` from
-// the resolver return on every run. `todo` is NOT
-// claimed as `tasks`, nothing is claimed as `requirements` / `baseline`.
+// The fixture repo supplies plan.md, todo.md, pbi-input.md and diff.patch.
+// What the artifact can prove as Flow inputs: `diff` always
+// (context.changedFiles), `plan` from same-named resolution, and `tasks` /
+// `requirements` from the CLI-side default binding table. `baseline` remains
+// unbound because its meaning differs by Flow.
 //
 // `steps` = the Flow document's step count (always equals steps.length, in
 // observe mode even when a required input is missing). `plain` / `debug` =
@@ -80,6 +81,8 @@ const CORE_ENTRIES = [
     entry: 'review-task',
     required: ['diff', 'tasks'],
     steps: 12,
+    // `tasks` is required and has no default binding on purpose, so the fixture
+    // repo's `todo.md` must NOT satisfy it (#2011 AC7 P3-2 review).
     plain: { stopped: 12 },
     debug: { stopped: 12 },
   },
@@ -87,6 +90,8 @@ const CORE_ENTRIES = [
     entry: 'review-final',
     required: ['diff', 'requirements'],
     steps: 14,
+    // Same reasoning as review-task: `pbi-input.md` must not satisfy the
+    // required `requirements` input.
     plain: { stopped: 14 },
     debug: { stopped: 14 },
   },
@@ -96,7 +101,7 @@ const ENV = { RIVER_OFFLINE: '1', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', NO_
 function setupRepo(t) {
   const dir = createTempDir({ prefix: 'rr-review-exec-entry-' });
   t.after(() => cleanupTempDir(dir));
-  for (const f of ['plan.md', 'todo.md', 'diff.patch']) {
+  for (const f of ['plan.md', 'todo.md', 'pbi-input.md', 'diff.patch']) {
     copyFileSync(join(FIXTURE, f), join(dir, f));
   }
   return dir;
@@ -166,9 +171,6 @@ describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
       const dir = setupRepo(t);
       const argv = ['exec', '--entry', entry];
       for (const pair of supply) argv.push('--artifact', pair);
-
-      const stopped = await run(dir, ['exec', '--entry', entry]);
-      assert.deepEqual(tally(stopped.steps), { stopped: steps });
 
       const walked = await run(dir, argv);
       assert.equal(validate(walked), true, JSON.stringify(validate.errors));

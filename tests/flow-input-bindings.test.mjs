@@ -1,0 +1,123 @@
+import assert from 'node:assert/strict';
+import test, { describe } from 'node:test';
+
+import {
+  DEFAULT_FLOW_INPUT_BINDINGS,
+  ENTRY_FLOW_INPUT_BINDING_OVERRIDES,
+  resolveFlowInputBindings,
+} from '../src/lib/flow-input-bindings.mjs';
+
+const document = {
+  inputs: [{ name: 'requirements' }, { name: 'tasks' }, { name: 'tests' }, { name: 'plan' }],
+};
+
+const resolution = (id, source = 'cwd') => ({
+  id,
+  path: `/repo/${id}`,
+  source,
+  exists: true,
+});
+
+describe('Flow input bindings', () => {
+  // Three supply routes compete for one Flow input name. Only the CLI-vs-default
+  // pair was pinned, so a mutation that ignored every non-CLI direct hit stayed
+  // green. Pin the full order: explicit CLI > same-named resolution from any
+  // other source > role-wide default binding.
+  test('supply order: explicit CLI beats a same-named resolution, which beats the default', () => {
+    // `tests` is the only role with a default binding, so it is the one role
+    // where all three supply routes can compete.
+    const cliWins = resolveFlowInputBindings({
+      document,
+      resolved: { tests: resolution('tests', 'cli'), junit: resolution('junit') },
+    });
+    assert.equal(cliWins.inputs.tests, '/repo/tests');
+    assert.equal(cliWins.inputSources.tests.kind, 'explicit');
+
+    // The mutation this pins: dropping non-CLI direct hits would fall through
+    // to `junit` here, silently changing which file the Flow reads.
+    const directWins = resolveFlowInputBindings({
+      document,
+      resolved: { tests: resolution('tests', 'config'), junit: resolution('junit') },
+    });
+    assert.equal(directWins.inputs.tests, '/repo/tests');
+    assert.equal(directWins.inputSources.tests.kind, 'direct');
+    assert.equal(directWins.inputSources.tests.source, 'config');
+
+    const defaultWins = resolveFlowInputBindings({
+      document,
+      resolved: { junit: resolution('junit') },
+    });
+    assert.equal(defaultWins.inputs.tests, '/repo/junit');
+    assert.equal(defaultWins.inputSources.tests.kind, 'default');
+    assert.equal(defaultWins.inputSources.tests.id, 'junit');
+  });
+
+  test('declares the role-wide defaults and no entry-specific exceptions yet', () => {
+    // `requirements` and `tasks` are deliberately absent: both are REQUIRED on
+    // some Flows, so a default there would let a file that merely happens to
+    // sit in the working tree declare a required input satisfied.
+    assert.deepEqual(DEFAULT_FLOW_INPUT_BINDINGS, {
+      tests: ['junit', 'coverage', 'test-cases'],
+    });
+    assert.deepEqual(ENTRY_FLOW_INPUT_BINDING_OVERRIDES, {});
+  });
+
+  test('required roles get no default binding: pbi-input and todo are ignored', () => {
+    // `tasks` is required on task-completion-review and `requirements` on
+    // final-review / requirements-review. A working tree that happens to hold
+    // `todo.md` or `pbi-input.md` must not satisfy them.
+    const { inputs, inputSources } = resolveFlowInputBindings({
+      document,
+      resolved: {
+        'pbi-input': resolution('pbi-input'),
+        todo: resolution('todo'),
+      },
+    });
+    assert.equal(inputs.requirements, undefined);
+    assert.equal(inputs.tasks, undefined);
+    assert.equal(inputSources.requirements, undefined);
+    assert.equal(inputSources.tasks, undefined);
+  });
+
+  test('an explicitly supplied required role is still honoured', () => {
+    const { inputs, inputSources } = resolveFlowInputBindings({
+      document,
+      resolved: { tasks: resolution('tasks', 'cli') },
+    });
+    assert.equal(inputs.tasks, '/repo/tasks');
+    assert.equal(inputSources.tasks.kind, 'explicit');
+  });
+
+  test('uses the first available tests candidate in declared order', () => {
+    const result = resolveFlowInputBindings({
+      document,
+      resolved: {
+        junit: resolution('junit'),
+        coverage: resolution('coverage'),
+        'test-cases': resolution('test-cases'),
+      },
+    });
+    assert.equal(result.inputs.tests, '/repo/junit');
+    assert.deepEqual(result.inputSources.tests, { kind: 'default', id: 'junit', source: 'cwd' });
+  });
+
+  test('an explicit same-named CLI artifact wins over the default binding', () => {
+    const result = resolveFlowInputBindings({
+      document,
+      resolved: { tasks: resolution('tasks', 'cli'), todo: resolution('todo') },
+    });
+    assert.equal(result.inputs.tasks, '/repo/tasks');
+    assert.deepEqual(result.inputSources.tasks, { kind: 'explicit', id: 'tasks', source: 'cli' });
+  });
+
+  test('does not bind undeclared roles or missing artifacts', () => {
+    const result = resolveFlowInputBindings({
+      document: { inputs: [{ name: 'design' }] },
+      resolved: {
+        todo: resolution('todo'),
+        'pbi-input': { exists: false, path: '/repo/pbi-input' },
+      },
+    });
+    assert.deepEqual(result, { inputs: {}, inputSources: {} });
+  });
+});
