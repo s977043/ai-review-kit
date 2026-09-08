@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.106.1](https://github.com/s977043/river-review/compare/v1.106.0...v1.106.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* **cli:** 存在しない明示 artifact が既定束縛に上書きされるのを止める ([#2160](https://github.com/s977043/river-review/issues/2160)) ([d72ecc7](https://github.com/s977043/river-review/commit/d72ecc7d516dd1ca75e0356e84e3aea3afa714b1)), closes [#2011](https://github.com/s977043/river-review/issues/2011)
+
 ## [1.106.0](https://github.com/s977043/river-review/compare/v1.105.0...v1.106.0) (2026-09-08)
 
 
