@@ -163,6 +163,27 @@ describe('river review exec --entry (Epic #2011 AC7 P2)', () => {
     }
   });
 
+  // Wiring pin: `executeFlow` distinguishes "never bound" from "bound to an
+  // artifact that is absent" only when the CLI hands it `inputSources`. Every
+  // other case here is satisfied by `inputs` + `unboundInputNames` alone, so
+  // dropping the `inputSources` argument at the call site left this file green.
+  // This case fails the moment that argument stops being passed.
+  test('an explicit --artifact naming an absent file reports the bound id', async (t) => {
+    const dir = setupRepo(t);
+    const artifact = await run(dir, [
+      'exec',
+      '--entry',
+      'review-design',
+      '--artifact',
+      'design=does-not-exist.md',
+    ]);
+    assert.ok(artifact.steps.length > 0, 'the entry must record steps');
+    for (const step of artifact.steps) {
+      assert.equal(step.outcome, 'stopped');
+      assert.equal(step.reason, 'bound artifact missing: design');
+    }
+  });
+
   test('step record vocabularies exactly match the artifact schema', () => {
     const schemaStep = SCHEMA.properties.steps.items.properties;
     assert.deepEqual([...schemaStep.outcome.enum].sort(), [...OUTCOMES].sort());
