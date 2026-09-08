@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.106.0](https://github.com/s977043/river-review/compare/v1.105.0...v1.106.0) (2026-09-08)
+
+
+### Features
+
+* **cli:** [#2011](https://github.com/s977043/river-review/issues/2011) AC7 P3-3 停止理由を未束縛と束縛先なしに分ける ([#2158](https://github.com/s977043/river-review/issues/2158)) ([fe84717](https://github.com/s977043/river-review/commit/fe847177bb0706f010474f6d1ef7d9b45df01ef1))
+
 ## [1.105.0](https://github.com/s977043/river-review/compare/v1.104.4...v1.105.0) (2026-09-08)
 
 
