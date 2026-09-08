@@ -81,15 +81,19 @@ const CORE_ENTRIES = [
     entry: 'review-task',
     required: ['diff', 'tasks'],
     steps: 12,
-    plain: { 'not-implemented': 12 },
-    debug: { 'not-implemented': 12 },
+    // `tasks` is required and has no default binding on purpose, so the fixture
+    // repo's `todo.md` must NOT satisfy it (#2011 AC7 P3-2 review).
+    plain: { stopped: 12 },
+    debug: { stopped: 12 },
   },
   {
     entry: 'review-final',
     required: ['diff', 'requirements'],
     steps: 14,
-    plain: { 'not-implemented': 13, skipped: 1 },
-    debug: { 'not-implemented': 13, skipped: 1 },
+    // Same reasoning as review-task: `pbi-input.md` must not satisfy the
+    // required `requirements` input.
+    plain: { stopped: 14 },
+    debug: { stopped: 14 },
   },
 ];
 const ENV = { RIVER_OFFLINE: '1', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', NO_COLOR: '1' };

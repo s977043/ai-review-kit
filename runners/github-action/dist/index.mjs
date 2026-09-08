@@ -60834,10 +60834,18 @@ var diff_processor = __nccwpck_require__(861);
  * `tests` has several valid forms of test evidence, so the first resolved
  * artifact wins. Keep this table small: a role without a stable Artifact
  * Input Contract counterpart must not receive a speculative default.
+ *
+ * `requirements` and `tasks` were candidates for `pbi-input` and `todo`, and
+ * are deliberately absent. Both are REQUIRED inputs on some Flows -- `tasks`
+ * on task-completion-review, `requirements` on final-review and
+ * requirements-review -- so a default there would let a file that merely
+ * happens to sit in the working tree declare a required input satisfied.
+ * `todo.md` is a common filename and the Artifact Input Contract defines it
+ * as "実装タスクと進捗", which does not carry the acceptance statement the
+ * Flow asks for. Required inputs must be supplied explicitly with
+ * `--artifact <role>=<path>` (#2011 AC7 P3-2 review).
  */
 const DEFAULT_FLOW_INPUT_BINDINGS = Object.freeze({
-  requirements: Object.freeze(['pbi-input']),
-  tasks: Object.freeze(['todo']),
   tests: Object.freeze(['junit', 'coverage', 'test-cases']),
 });
 
@@ -60845,7 +60853,8 @@ const DEFAULT_FLOW_INPUT_BINDINGS = Object.freeze({
  * Entry-specific candidates, checked before role-wide defaults.
  *
  * Empty today by design. The separate table prevents a future exceptional
- * Flow from duplicating the defaults for every entry.
+ * Flow from duplicating the defaults for every entry, and is where a binding
+ * that is only correct for one Flow belongs.
  */
 const ENTRY_FLOW_INPUT_BINDING_OVERRIDES = Object.freeze({});
 
