@@ -60821,6 +60821,98 @@ var expires_at = __nccwpck_require__(5009);
 var flow_loader = __nccwpck_require__(4357);
 // EXTERNAL MODULE: ./src/lib/diff-processor.mjs
 var diff_processor = __nccwpck_require__(861);
+;// CONCATENATED MODULE: ./src/lib/flow-input-bindings.mjs
+// Flow input bindings (Epic #2011 AC7 P3-2).
+//
+// Flow inputs describe review roles while Artifact Input Contract IDs describe
+// concrete files. This module is the CLI-side SSoT that connects the two;
+// Flow documents intentionally carry no host vocabulary.
+
+/**
+ * Role-wide default artifact IDs, in selection order.
+ *
+ * `tests` has several valid forms of test evidence, so the first resolved
+ * artifact wins. Keep this table small: a role without a stable Artifact
+ * Input Contract counterpart must not receive a speculative default.
+ */
+const DEFAULT_FLOW_INPUT_BINDINGS = Object.freeze({
+  requirements: Object.freeze(['pbi-input']),
+  tasks: Object.freeze(['todo']),
+  tests: Object.freeze(['junit', 'coverage', 'test-cases']),
+});
+
+/**
+ * Entry-specific candidates, checked before role-wide defaults.
+ *
+ * Empty today by design. The separate table prevents a future exceptional
+ * Flow from duplicating the defaults for every entry.
+ */
+const ENTRY_FLOW_INPUT_BINDING_OVERRIDES = Object.freeze({});
+
+function declaredInputNames(document) {
+  return new Set(
+    (Array.isArray(document?.inputs) ? document.inputs : [])
+      .map((input) => input?.name)
+      .filter((name) => typeof name === 'string')
+  );
+}
+
+function resolvedArtifact(resolved, id) {
+  const value = resolved?.[id];
+  return value?.exists === true && typeof value.path === 'string' && value.path ? value : null;
+}
+
+/**
+ * Bind resolved Artifact Input Contract IDs to a Flow's declared input names.
+ *
+ * A directly named artifact (for example `--artifact tasks=other.md`) always
+ * wins over a role default (`todo`). `inputSources` preserves whether each
+ * value came from an explicit CLI argument, another direct resolver source,
+ * or a default binding so later phases can make source-aware stop decisions.
+ *
+ * @param {object} options
+ * @param {string|null} [options.entry] Flow entry name, for exceptional bindings
+ * @param {object} options.document resolved Flow document
+ * @param {Record<string, {exists?: boolean, path?: string, source?: string}>} [options.resolved]
+ * @returns {{inputs: Record<string, string>, inputSources: Record<string, {kind: 'explicit'|'direct'|'default', id: string, source: string|null}>}}
+ */
+function resolveFlowInputBindings({ entry = null, document, resolved = {} }) {
+  const names = declaredInputNames(document);
+  const inputs = {};
+  const inputSources = {};
+
+  // Preserve P3-1's same-named resolution and make it take precedence over
+  // role defaults. A CLI-sourced direct ID is the explicit supply contract.
+  for (const name of [...names].sort()) {
+    const artifact = resolvedArtifact(resolved, name);
+    if (!artifact) continue;
+    inputs[name] = artifact.path;
+    inputSources[name] = {
+      kind: artifact.source === 'cli' ? 'explicit' : 'direct',
+      id: name,
+      source: artifact.source ?? null,
+    };
+  }
+
+  const entryOverrides =
+    entry && ENTRY_FLOW_INPUT_BINDING_OVERRIDES[entry]
+      ? ENTRY_FLOW_INPUT_BINDING_OVERRIDES[entry]
+      : {};
+  for (const name of [...names].sort()) {
+    if (name in inputs) continue;
+    const candidates = entryOverrides[name] ?? DEFAULT_FLOW_INPUT_BINDINGS[name] ?? [];
+    for (const id of candidates) {
+      const artifact = resolvedArtifact(resolved, id);
+      if (!artifact) continue;
+      inputs[name] = artifact.path;
+      inputSources[name] = { kind: 'default', id, source: artifact.source ?? null };
+      break;
+    }
+  }
+
+  return { inputs, inputSources };
+}
+
 ;// CONCATENATED MODULE: ./src/cli/commands/review.mjs
 // `river review` subcommand handler.
 //
@@ -60828,6 +60920,7 @@ var diff_processor = __nccwpck_require__(861);
 // refactor (#issue: split main() into per-subcommand handlers). Behavior,
 // messages, and exit codes are unchanged; only the enclosing function and the
 // relative import depth differ from the original inline block.
+
 
 
 
@@ -60883,15 +60976,9 @@ async function resolveBaseRepoDiff(parsed) {
  *   - `context.changedFiles` exists only when the review diff resolved
  *     (review-plan.mjs sets `context` under `diffResolved`), so it stands for
  *     the Flow input `diff`.
- *   - `resolved` is the resolver result returned by `runReviewPlan`. Only IDs
- *     that ARE a Flow input name
- *     (`plan`, `diff`) are taken; no ID-to-input mapping is invented here —
- *     `todo` is not claimed as `tasks`, `pbi-input` not as `requirements`.
- *
- * Everything else is absent, so a Flow whose required inputs the artifact
- * cannot vouch for is recorded (observe mode) as every step `stopped`; that
- * is the honest record, not a defect. Wiring the resolver's full input set is
- * the capability phase's job.
+ *   - `resolved` is the resolver result returned by `runReviewPlan`. The
+ *     CLI-side binding SSoT maps compatible contract IDs to Flow roles while
+ *     preserving direct CLI input precedence.
  *
  * @param {Record<string, unknown>} artifact
  * @param {Record<string, unknown>|undefined} resolved - Resolver result from
@@ -60899,22 +60986,12 @@ async function resolveBaseRepoDiff(parsed) {
  * @param {object} document - the resolved Flow document (`inputs[]` names).
  * @returns {Record<string, unknown>}
  */
-function resolvedFlowInputs(artifact, document, resolved) {
-  const names = new Set(
-    (Array.isArray(document?.inputs) ? document.inputs : [])
-      .map((input) => input?.name)
-      .filter((name) => typeof name === 'string')
-  );
-  const inputs = {};
-  if (names.has('diff') && Array.isArray(artifact?.context?.changedFiles)) {
+function resolvedFlowInputs(artifact, entry, document, resolved) {
+  const { inputs } = resolveFlowInputBindings({ entry, document, resolved });
+  const declaresDiff =
+    Array.isArray(document?.inputs) && document.inputs.some((input) => input?.name === 'diff');
+  if (declaresDiff && !('diff' in inputs) && Array.isArray(artifact?.context?.changedFiles)) {
     inputs.diff = artifact.context.changedFiles;
-  }
-  if (resolved && typeof resolved === 'object') {
-    for (const id of Object.keys(resolved).sort()) {
-      if (names.has(id) && resolved[id]?.exists === true && resolved[id]?.path) {
-        inputs[id] = resolved[id].path;
-      }
-    }
   }
   return inputs;
 }
@@ -61113,7 +61190,7 @@ async function runReviewCommand(parsed) {
       const result = await executeFlow({
         document: resolvedFlow.document,
         capabilities: {},
-        inputs: resolvedFlowInputs(artifact, resolvedFlow.document, resolved),
+        inputs: resolvedFlowInputs(artifact, parsed.entry, resolvedFlow.document, resolved),
         // Record only: `observe` continues past a missing capability as
         // `not-implemented` and lists every step even when a required input
         // is missing. `judgment` is reserved for P4 and not passed here.
