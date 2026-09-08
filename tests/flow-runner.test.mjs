@@ -164,8 +164,62 @@ describe('flow-runner: required inputs', () => {
     });
     assert.equal(
       result.steps[0].reason,
-      'input not bound: design; supply it with --artifact design=<path>; bound artifact missing: junit (junit.xml)'
+      'input not bound: design; supply it with --artifact design=<path>; bound artifact missing: junit'
     );
+  });
+
+  test('an unbound name wins over a bound-but-missing artifact for the same role', () => {
+    // Both classifications can apply to one role. The unbound case is the one
+    // the user can act on without guessing a path, so it is reported.
+    const document = {
+      steps: [{ use: 'x' }],
+      inputs: [{ name: 'design', required: true }],
+    };
+    return executeFlow({
+      document,
+      inputSources: { design: { kind: 'default', id: 'design-doc', path: 'design.md' } },
+      unboundInputNames: ['design'],
+    }).then((result) => {
+      assert.equal(
+        result.steps[0].reason,
+        'input not bound: design; supply it with --artifact design=<path>'
+      );
+    });
+  });
+
+  test('invalid optional metadata is ignored rather than thrown', async () => {
+    // Every one of these was an ignored extra property before the arguments
+    // existed. Throwing would break callers that pass a wrong shape.
+    const document = {
+      steps: [{ use: 'x' }],
+      inputs: [{ name: 'design', required: true }],
+    };
+    for (const extra of [
+      { inputSources: null },
+      { inputSources: [] },
+      { unboundInputNames: null },
+      { unboundInputNames: 'design' },
+    ]) {
+      const result = await executeFlow({ document, ...extra });
+      assert.equal(result.steps[0].reason, 'required input missing: design', JSON.stringify(extra));
+    }
+  });
+
+  test('a missing bound artifact reports the ID, never the resolved path', async () => {
+    // The Review Artifact is written to --output-file and echoed by the Action,
+    // so a resolved absolute path here would travel outside the machine.
+    const document = {
+      steps: [{ use: 'x' }],
+      inputs: [{ name: 'tasks', required: true }],
+    };
+    const result = await executeFlow({
+      document,
+      inputSources: {
+        tasks: { kind: 'explicit', id: 'tasks', path: '/home/someone/private/x.md' },
+      },
+    });
+    assert.equal(result.steps[0].reason, 'bound artifact missing: tasks');
+    assert.equal(JSON.stringify(result).includes('/home/someone'), false);
   });
 
   test('omitting optional binding metadata preserves the original missing-input reason', async () => {

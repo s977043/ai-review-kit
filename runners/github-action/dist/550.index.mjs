@@ -252,9 +252,15 @@ function declaredInputNames(document) {
  *   missing capability as `not-implemented` and continues; `execute` treats
  *   it as unsatisfied per `onUnsatisfied`.
  * @param {Record<string, {id?: string, path?: string}>} [params.inputSources]
- *   Optional CLI binding metadata. When supplied with `unboundInputNames`, it
+ *   Optional CLI binding metadata, ignored when it is not a plain object. Only
+ *   the artifact `id` reaches the reason text: the resolved `path` stays out of
+ *   the Review Artifact, which is written to `--output-file` and echoed by the
+ *   Action. When a role is both unbound and bound-but-missing, unbound wins,
+ *   because that is the case the user can act on without guessing a path.
+ *   When supplied with `unboundInputNames`, it
  *   makes a missing required input's user-facing reason actionable.
- * @param {string[]} [params.unboundInputNames] Optional names with no binding.
+ * @param {string[]} [params.unboundInputNames] Optional names with no binding,
+ *   ignored when it is not an array.
  * @returns {Promise<{ steps: object[], stopped: boolean, stopReason?: string, missingInputs: string[], mode: string }>}
  */
 async function executeFlow({
@@ -278,12 +284,13 @@ async function executeFlow({
   if (!isPlainObject(judgment)) {
     throw new FlowRunnerError('executeFlow: "judgment" must be an object.');
   }
-  if (inputSources !== undefined && !isPlainObject(inputSources)) {
-    throw new FlowRunnerError('executeFlow: "inputSources" must be an object when supplied.');
-  }
-  if (unboundInputNames !== undefined && !Array.isArray(unboundInputNames)) {
-    throw new FlowRunnerError('executeFlow: "unboundInputNames" must be an array when supplied.');
-  }
+  // These two are OPTIONAL diagnostics, not part of the execution contract: a
+  // caller that passes a wrong shape gets the generic reason, not an exception.
+  // Throwing here would have been a backward-compatibility break, since every
+  // one of these values was an ignored extra property before this argument
+  // existed (#2011 AC7 P3-3 review).
+  const bindingSources = isPlainObject(inputSources) ? inputSources : undefined;
+  const unboundNames = Array.isArray(unboundInputNames) ? unboundInputNames : undefined;
   if (!FLOW_RUN_MODES.includes(mode)) {
     throw new FlowRunnerError(
       `executeFlow: unknown mode "${mode}" (expected ${FLOW_RUN_MODES.join(' | ')}).`
@@ -291,9 +298,9 @@ async function executeFlow({
   }
 
   const inputMap = normalisedEntries(inputs);
-  const inputSourceMap = inputSources === undefined ? null : normalisedEntries(inputSources);
+  const inputSourceMap = bindingSources === undefined ? null : normalisedEntries(bindingSources);
   const unboundInputSet = new Set(
-    (unboundInputNames ?? [])
+    (unboundNames ?? [])
       .filter((name) => typeof name === 'string')
       .map((name) => name.normalize('NFC'))
   );
@@ -307,7 +314,7 @@ async function executeFlow({
   const missingInputReason = () => {
     // The optional metadata is deliberately opt-in: direct callers that omit
     // it retain P1's exact reason text.
-    if (inputSourceMap === null && unboundInputNames === undefined) {
+    if (inputSourceMap === null && unboundNames === undefined) {
       return `required input missing: ${missingInputs.join(', ')}`;
     }
     return missingInputs
@@ -317,8 +324,11 @@ async function executeFlow({
         }
         const source = inputSourceMap?.get(name);
         if (source && typeof source === 'object' && typeof source.id === 'string') {
-          const path = typeof source.path === 'string' && source.path ? ` (${source.path})` : '';
-          return `bound artifact missing: ${source.id}${path}`;
+          // Report the artifact ID, never the resolved path. The Review
+          // Artifact is written to `--output-file` and echoed by the Action, so
+          // an absolute path here would carry the user's directory layout into
+          // an externally shared document (#2011 AC7 P3-3 review).
+          return `bound artifact missing: ${source.id}`;
         }
         return `required input missing: ${name}`;
       })
