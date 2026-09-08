@@ -87,7 +87,12 @@ export function resolveFlowInputBindings({ entry = null, document, resolved = {}
       ? ENTRY_FLOW_INPUT_BINDING_OVERRIDES[entry]
       : {};
   for (const name of [...names].sort()) {
-    if (name in inputs) continue;
+    // Guard on `inputSources`, not `inputs`: an explicit `--artifact` pointing
+    // at a file that does not exist records a source but supplies no path, and
+    // guarding on `inputs` let a default silently override it. That both broke
+    // the documented "explicit always wins" order and erased the
+    // bound-artifact-missing reason P3-3 reports (#2011 AC7 P3 range review).
+    if (name in inputSources) continue;
     const candidates = entryOverrides[name] ?? DEFAULT_FLOW_INPUT_BINDINGS[name] ?? [];
     for (const id of candidates) {
       const artifact = resolvedArtifact(resolved, id);
