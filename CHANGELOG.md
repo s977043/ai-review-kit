@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.106.2](https://github.com/s977043/river-review/compare/v1.106.1...v1.106.2) (2026-09-09)
+
+
+### Bug Fixes
+
+* **scripts:** doc 列挙の実体を git の追跡対象に限定する ([#2165](https://github.com/s977043/river-review/issues/2165)) ([4ce4fb2](https://github.com/s977043/river-review/commit/4ce4fb23e7858ea5de12c41778ff8bbf78d84057))
+
 ## [1.106.1](https://github.com/s977043/river-review/compare/v1.106.0...v1.106.1) (2026-09-08)
 
 
