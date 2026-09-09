@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.106.3](https://github.com/s977043/river-review/compare/v1.106.2...v1.106.3) (2026-09-09)
+
+
+### Bug Fixes
+
+* **scripts:** pr-unstall の 422 出力を heredoc から printf へ変える ([#2172](https://github.com/s977043/river-review/issues/2172)) ([b142d35](https://github.com/s977043/river-review/commit/b142d357e28eb72ff058d4e68afff6967b7063da))
+
 ## [1.106.2](https://github.com/s977043/river-review/compare/v1.106.1...v1.106.2) (2026-09-09)
 
 
