@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.107.0](https://github.com/s977043/river-review/compare/v1.106.4...v1.107.0) (2026-09-09)
+
+
+### Features
+
+* **scripts:** heredoc サイズの機械検査を code hygiene へ追加する ([#2186](https://github.com/s977043/river-review/issues/2186)) ([00edc26](https://github.com/s977043/river-review/commit/00edc263beb731045e61bb1acdbf0f797c3d75ce))
+
 ## [1.106.4](https://github.com/s977043/river-review/compare/v1.106.3...v1.106.4) (2026-09-09)
 
 
