@@ -11,6 +11,7 @@
 - **Proceed autonomously**: read-only exploration, running commands listed in `.claude/settings.json` allow list, editing paths in AGENTS.md "Editable" scope.
 - **Ask before acting**: editing paths in AGENTS.md "Ask before editing" scope, adding dependencies, running commands not in allow list.
 - **Always ask**: architectural changes, modifying AGENTS.md or CLAUDE.md, any destructive git operation, changes touching `src/` that may break skill or schema alignment.
+  - **承認済みの実行計画は個別確認を覆う。** ユーザーが計画を承認したら、その計画に含まれる `src/` の編集を 1 件ずつ確認し直さない。計画外の `src/` 編集、計画からの逸脱、計画の途中で見つかった別件は従来どおり確認する。この但し書きが無いと、承認済みの計画でも各ステップの着手前に停止してしまう（2026-09-09 の `parseArgs` 分割で 1 回発生）。
 
 ## Change Policy
 
