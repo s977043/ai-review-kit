@@ -39,6 +39,7 @@ import {
 } from './cli/parse/vocabulary.mjs';
 import { consumeEagerCommand } from './cli/parse/eager-command.mjs';
 import { consumeOption } from './cli/parse/options.mjs';
+import { applyPhaseFallback, checkReviewSubcommand } from './cli/parse/postprocess.mjs';
 import { runReviewCommand } from './cli/commands/review.mjs';
 import { runSkillsCommand } from './cli/commands/skills.mjs';
 import { runRunsCommand } from './cli/commands/runs.mjs';
@@ -1586,31 +1587,7 @@ function parseArgs(argv) {
     warnUnknownInputContexts(parsed.availableContexts);
   }
 
-  // `review` needs one of plan | exec | verify | route. The handler reported
-  // both the missing and the unknown case with exit 3 — the code this project
-  // reserves for the `--gate` ESCALATE decision and for handler-level
-  // configuration errors — so an argument-order typo read as "a human must
-  // look at this" (#1755). Detected here instead, which makes it exit 1 like
-  // every other usage error (#1709 contract).
-  if (
-    parsed.command === 'review' &&
-    !parsed.usageError &&
-    !REVIEW_SUBCOMMANDS.has(parsed.reviewSubcommand)
-  ) {
-    // A path taken from after `--` is NOT a candidate subcommand: the caller
-    // declared it to be a path. Reporting it as one produced the contradiction
-    // `river review -- plan` -> `"plan" is not a river review subcommand
-    // (plan | exec | verify | route)`.
-    const got =
-      parsed.reviewSubcommand ??
-      (parsed.targetConsumed && !terminatorTookPositional ? parsed.target : null);
-    console.error(
-      (got === null
-        ? 'Error: river review requires a subcommand (plan | exec | verify | route).'
-        : `Error: "${got}" is not a river review subcommand (plan | exec | verify | route).`) +
-        ' The subcommand may be written before or after the options —' +
-        ' `river review plan --plan-only` and `river review --plan-only plan` are both accepted.'
-    );
+  if (checkReviewSubcommand(parsed, terminatorTookPositional)) {
     usageError(parsed);
   }
 
@@ -1621,27 +1598,8 @@ function parseArgs(argv) {
   // early when parsed.usageError is already set).
   checkCommandScopedOptions(parsed);
 
-  // #1759 C2: RIVER_PHASE used to skip validation entirely and propagate an
-  // invalid value straight through to the printed phase with exit 0, unlike
-  // --phase which already validates against PHASES above. Reuse that same
-  // vocabulary and the same case-insensitive normalization here instead of
-  // writing a second check (CLAUDE.md "Import the SSoT, never re-derive it").
-  //
-  // Only runs when --phase did NOT already set and validate parsed.phase
-  // (parsed.phaseExplicit) and when RIVER_PHASE was actually set to a
-  // non-empty string — unset or empty must keep falling back to the default
-  // ('midstream'), matching the object-literal default above and --phase's
-  // own "not required" contract.
-  if (!parsed.usageError && !parsed.phaseExplicit && process.env.RIVER_PHASE) {
-    const envPhase = process.env.RIVER_PHASE.toLowerCase();
-    if (!PHASES.includes(envPhase)) {
-      console.error(
-        `Error: RIVER_PHASE must be one of: ${PHASES.join(', ')} (got "${process.env.RIVER_PHASE}").`
-      );
-      usageError(parsed);
-    } else {
-      parsed.phase = envPhase;
-    }
+  if (applyPhaseFallback(parsed)) {
+    usageError(parsed);
   }
 
   return parsed;
