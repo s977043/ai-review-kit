@@ -101,35 +101,39 @@ choose_route() {
 # Print the manual procedure for a 422 from update-branch. Which procedure
 # depends on why GitHub refused; the message text is the only discriminator.
 print_422_procedure() {
+  # 以下の 2 つは #2144 まで `cat >&2 <<PROC` の heredoc だった。bash 5.3.15
+  # （homebrew）は本体が 512 バイトを超える heredoc で決定論的に deadlock する。
+  # conflict 側の本体は 538 バイトで帯に入り、`--execute` の 422 経路がそのまま
+  # 固まっていた（隣の 318 バイト側は帯の下なので通っており、片方だけ落ちていた）。
+  # #1951 が同じ原因で 3 本を直しているが、本スクリプトはその 16 日後に追加された
+  # ため掃引の対象外だった。heredoc へ戻さないこと。
   local pr="$1" head_ref="$2" body="$3"
   local script_dir
   script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
   echo "update-branch returned 422 for #${pr}; nothing was changed." >&2
   echo "${body}" >&2
   if printf '%s' "${body}" | grep -qi 'no new commits'; then
-    cat >&2 <<PROC
-The head is not behind its base, so update-branch has nothing to merge
-(runbook Step 2, "pure BLOCKED"). The remaining escape is an empty commit
-pushed from your own account:
-
-  gh api user --jq .login | grep -q ${WRITE_ACCOUNT} || gh auth switch -u ${WRITE_ACCOUNT}
-  ${script_dir}/release-please-kick.sh ${head_ref}
-PROC
+    printf '%s\n' \
+      'The head is not behind its base, so update-branch has nothing to merge' \
+      '(runbook Step 2, "pure BLOCKED"). The remaining escape is an empty commit' \
+      'pushed from your own account:' \
+      '' \
+      "  gh api user --jq .login | grep -q ${WRITE_ACCOUNT} || gh auth switch -u ${WRITE_ACCOUNT}" \
+      "  ${script_dir}/release-please-kick.sh ${head_ref}" >&2
   else
-    cat >&2 <<PROC
-Resolve the conflict locally, from your own account, then push (fast-forward,
-no force). This is not automated because it edits a working tree:
-
-  git fetch origin
-  git switch ${head_ref}
-  git merge origin/main
-  # if the only conflicts are under runners/github-action/dist/**:
-  npm run build:action && git add runners/github-action/dist
-  git commit            # completes the merge
-  git push              # fast-forward; do not rebase, do not force
-
-See docs/runbook/bot-pushed-head-kick.md and CLAUDE.md "Strict-mode batch merge".
-PROC
+    printf '%s\n' \
+      'Resolve the conflict locally, from your own account, then push (fast-forward,' \
+      'no force). This is not automated because it edits a working tree:' \
+      '' \
+      '  git fetch origin' \
+      "  git switch ${head_ref}" \
+      '  git merge origin/main' \
+      '  # if the only conflicts are under runners/github-action/dist/**:' \
+      '  npm run build:action && git add runners/github-action/dist' \
+      '  git commit            # completes the merge' \
+      '  git push              # fast-forward; do not rebase, do not force' \
+      '' \
+      'See docs/runbook/bot-pushed-head-kick.md and CLAUDE.md "Strict-mode batch merge".' >&2
   fi
 }
 
