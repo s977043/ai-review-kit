@@ -2443,6 +2443,34 @@ describe('#1759 A1: `--` ends option parsing', () => {
     assert.equal(parsed.dryRun, false);
   });
 
+  // `--` 経由で取り込んだパスは「候補サブコマンド」ではない。#1755 が直した
+  // 矛盾（`river review -- plan` が `"plan" is not a river review subcommand` と
+  // 言う）は `terminatorTookPositional` が担っているが、exit code は両方 1 なので
+  // CASES / VALID_CASES では守れない。実際に、その代入を落とす変異を入れても
+  // tests/cli-parse-args.test.mjs と本ファイルは全緑のままだった（2026-09-09 実測）。
+  // メッセージまで見るテストをここに置く。
+  test('a path taken via `--` is not reported as a candidate subcommand (#1755)', async (t) => {
+    // `plan` が実在しないと `--` の存在検査で先に落ち、この分岐へ到達しない。
+    const { dir, cleanup } = await createTempGitRepo({
+      prefix: 'river-terminator-subcommand-',
+      initialFiles: { 'plan/.gitkeep': '', 'a.txt': 'a\n' },
+      changedFiles: { 'a.txt': 'a\nb\n' },
+    });
+    t.after(cleanup);
+
+    const result = await runCliInProcess(['review', '--', 'plan'], {
+      cwd: dir,
+      env: { RIVER_OFFLINE: '1', NO_COLOR: '1', RIVER_PHASE: undefined },
+    });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /requires a subcommand/);
+    assert.doesNotMatch(
+      result.stderr,
+      /is not a river review subcommand/,
+      '`--` の後ろのパスを候補サブコマンドとして報告している（#1755 の矛盾が再発）'
+    );
+  });
+
   test('`--` does not turn a subcommand word into a subcommand', () => {
     // `./plan` はこのリポジトリに存在しないため usage error になり、
     // reviewSubcommand は null のまま（パスとしてしか読まない証拠）。

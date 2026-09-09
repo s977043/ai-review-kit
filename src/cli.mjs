@@ -26,6 +26,7 @@ import { DEPTH_TO_REVIEW_MODE } from './lib/review-plan-generator.mjs';
 import { parseExpiresAt } from './lib/expires-at.mjs';
 import { listFlowEntryNames } from './lib/flow-loader.mjs';
 import { acceptsPositionalPath, takePositionalPath } from './cli/parse/positionals.mjs';
+import { consumeTerminator } from './cli/parse/terminator.mjs';
 import { runReviewCommand } from './cli/commands/review.mjs';
 import { runSkillsCommand } from './cli/commands/skills.mjs';
 import { runRunsCommand } from './cli/commands/runs.mjs';
@@ -1535,34 +1536,12 @@ function parseArgs(argv) {
     // command-specific blocks, so that all five path-taking surfaces behave the
     // same (`evolve` would otherwise report it as its own unknown option).
     if (arg === '--') {
-      let terminatorError = false;
-      while (args.length) {
-        const positional = args.shift();
-        if (parsed.targetConsumed || !acceptsPositionalPath(parsed)) {
-          console.error(`Error: unexpected argument "${positional}".`);
-          usageError(parsed);
-          terminatorError = true;
-          break;
-        }
-        // The token is a path by construction, so it must BE one. Without this
-        // check `river evolve aggregate -- nosuchdir` exited 0 with an empty
-        // aggregate: `--` bypasses the eager branch's "a non-existent,
-        // non-subcommand token is a mistyped subcommand" rejection, turning a
-        // mistyped path into a silent empty result. #1746 W2 already treated
-        // "exit 0 while silently falling back" as a regression.
-        if (!existsSync(positional)) {
-          console.error(
-            `Error: "${positional}" does not exist ` +
-              '(every token after `--` is read as a path, never as an option or a subcommand).'
-          );
-          usageError(parsed);
-          terminatorError = true;
-          break;
-        }
-        takePositionalPath(parsed, positional);
-        terminatorTookPositional = true;
+      const { error, tookPositional } = consumeTerminator(parsed, args);
+      if (tookPositional) terminatorTookPositional = true;
+      if (error) {
+        usageError(parsed);
+        break;
       }
-      if (terminatorError) break;
       continue;
     }
     if (!parsed.command && EAGER_COMMANDS.has(arg)) {
