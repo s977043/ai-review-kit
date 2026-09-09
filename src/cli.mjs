@@ -38,6 +38,7 @@ import {
   SUPPRESSION_SUBCOMMANDS,
 } from './cli/parse/vocabulary.mjs';
 import { consumeEagerCommand } from './cli/parse/eager-command.mjs';
+import { consumeOption } from './cli/parse/options.mjs';
 import { runReviewCommand } from './cli/commands/review.mjs';
 import { runSkillsCommand } from './cli/commands/skills.mjs';
 import { runRunsCommand } from './cli/commands/runs.mjs';
@@ -1552,69 +1553,11 @@ function parseArgs(argv) {
       parsed.command = arg;
       break;
     }
-    if (arg === '--plan-only') {
-      parsed.planOnly = true;
-      continue;
-    }
-    if (arg === '--fail-on' || arg === '--warn-on') {
-      const value = args.shift();
-      const sev = value ? value.toLowerCase() : '';
-      if (!SEVERITY_VALUES.includes(sev)) {
-        console.error(
-          `Error: ${arg} must be one of: ${SEVERITY_VALUES.join(', ')} (got "${value ?? ''}").`
-        );
-        usageError(parsed);
-        break;
-      }
-      if (arg === '--fail-on') parsed.failOn = sev;
-      else parsed.warnOn = sev;
-      continue;
-    }
-    if (arg === '--advisory-only') {
-      parsed.advisoryOnly = true;
-      continue;
-    }
-    if (arg === '--gate') {
-      parsed.gate = true;
-      continue;
-    }
-    if (arg === '--offline' || arg === '--rules-only') {
-      parsed.offline = true;
-      continue;
-    }
-    if (arg === '--plan') {
-      const value = args.shift();
-      if (!value || value.startsWith('-')) {
-        console.error('Error: --plan option requires a path.');
-        usageError(parsed);
-        break;
-      }
-      parsed.planFile = value;
-      continue;
-    }
-    if (arg === '--output-file') {
-      const value = args.shift();
-      if (!value || value.startsWith('-')) {
-        console.error('Error: --output-file option requires a path.');
-        usageError(parsed);
-        break;
-      }
-      parsed.outputFile = value;
-      continue;
-    }
-    if (arg === '--summary-file') {
-      const value = args.shift();
-      if (!value || value.startsWith('-')) {
-        console.error('Error: --summary-file option requires a path.');
-        usageError(parsed);
-        break;
-      }
-      parsed.summaryFile = value;
-      continue;
-    }
-    if (arg === '--quiet') {
-      parsed.quiet = true;
-      continue;
+    const optionResult = consumeOption(parsed, arg, args);
+    if (optionResult === 'continue') continue;
+    if (optionResult === 'break') {
+      usageError(parsed);
+      break;
     }
     if (arg === '--artifacts-dir') {
       const value = args.shift();
