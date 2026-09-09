@@ -61277,6 +61277,12 @@ function consumeEagerCommand(parsed, arg, args) {
 
 
 
+
+
+
+
+
+
 const SEVERITY_VALUES = Object.keys(finding_factory/* SEVERITY_RANK */.f3);
 
 /**
@@ -61349,6 +61355,153 @@ function consumeOption(parsed, arg, args) {
   }
   if (arg === '--quiet') {
     parsed.quiet = true;
+    return 'continue';
+  }
+  if (arg === '--artifacts-dir') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --artifacts-dir option requires a path.');
+      return 'break';
+    }
+    parsed.artifactsDir = value;
+    return 'continue';
+  }
+  if (arg === '--artifact') {
+    const value = args.shift();
+    const eq = value ? value.indexOf('=') : -1;
+    if (!value || value.startsWith('-') || eq <= 0) {
+      console.error('Error: --artifact requires <id>=<path> (e.g. --artifact plan=./plan.md).');
+      return 'break';
+    }
+    parsed.cliArtifacts[value.slice(0, eq)] = value.slice(eq + 1);
+    return 'continue';
+  }
+  if (arg === '--ensemble') {
+    // #911 Phase 3 Slice B. Sugar for "concatenate every *.md file under
+    // <dir> into a single review-external artifact". The synthesis skill
+    // (`independent-review-synthesis`) consumes the merged
+    // file. We deliberately do NOT pin specific reviewer names (Claude /
+    // Codex / Cursor) in the flag — file names carry that information, so
+    // the CLI stays provider-agnostic.
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error(
+        'Error: --ensemble requires a directory path (e.g. --ensemble ./.river/reviews).'
+      );
+      return 'break';
+    }
+    if (parsed.cliArtifacts['review-external']) {
+      console.warn(
+        'Warning: --ensemble ignored because --artifact review-external=... is already set. Remove the --artifact flag or drop --ensemble.'
+      );
+      return 'continue';
+    }
+    const dir = external_node_path_.resolve(external_node_process_.cwd(), value);
+    let files;
+    try {
+      files = (0,external_node_fs_.readdirSync)(dir)
+        .filter((f) => f.endsWith('.md'))
+        .sort();
+    } catch (err) {
+      console.error(`Error: --ensemble cannot read directory ${value}: ${err.message}`);
+      return 'break';
+    }
+    if (files.length === 0) {
+      console.error(`Error: --ensemble found no *.md files in ${value}.`);
+      return 'break';
+    }
+    const merged = files
+      .map((f) => `\n\n---\nFrom: ${f}\n---\n\n${(0,external_node_fs_.readFileSync)(external_node_path_.join(dir, f), 'utf8')}`)
+      .join('');
+    const tmpPath = external_node_path_.join(external_node_os_.tmpdir(), `river-ensemble-${external_node_process_.pid}-${Date.now()}.md`);
+    (0,external_node_fs_.writeFileSync)(tmpPath, merged);
+    external_node_process_.on('exit', () => {
+      try {
+        (0,external_node_fs_.unlinkSync)(tmpPath);
+      } catch {
+        // ignore cleanup errors — OS will reclaim tmpdir
+      }
+    });
+    parsed.cliArtifacts['review-external'] = tmpPath;
+    return 'continue';
+  }
+  if (arg === '--phase') {
+    if (!args[0] || args[0].startsWith('-')) {
+      console.error('Error: --phase option requires a value.');
+      return 'break';
+    }
+    const value = args.shift();
+    // #1746 follow-up: an invalid phase used to exit 0 and fall back to the
+    // default (`midstream`) downstream in normalizePhase, so the run silently
+    // reviewed a different phase than the one that was typed. PHASES is the
+    // shared vocabulary in src/lib/planner-utils.mjs.
+    //
+    // Case-insensitive, and the lowercased value is what gets stored. That is
+    // `normalizePhase`'s (src/lib/local-runner.mjs) semantics, pinned by
+    // tests/local-runner-internals.test.mjs "normalizes case" — so
+    // `--phase Upstream` really did run as `upstream` and MUST keep working.
+    // `normalizePhase` itself cannot be the validator here: its contract is to
+    // fall back to `midstream` for anything invalid, which is exactly the
+    // silent fallback this guard removes. It also matches the shape the
+    // sibling enum options in this parser already use (--planner / --output /
+    // --format / --fail-on all lowercase before comparing).
+    const phase = value.toLowerCase();
+    if (!planner_utils/* PHASES */.ZG.includes(phase)) {
+      console.error(`Error: --phase must be one of: ${planner_utils/* PHASES */.ZG.join(', ')} (got "${value}").`);
+      return 'break';
+    }
+    parsed.phase = phase;
+    // #1759 C2: marks that --phase already validated and set parsed.phase,
+    // so the post-loop RIVER_PHASE check below must not re-derive it from
+    // the (possibly invalid) env var and must not report a second error.
+    parsed.phaseExplicit = true;
+    return 'continue';
+  }
+  if (arg === '--cases') {
+    const value = args.shift();
+    // #1709 Slice 3 (B3): a trailing `--cases` used to null the field, so
+    // eval silently fell back to the DEFAULT fixtures and printed [PASS].
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --cases option requires a path.');
+      return 'break';
+    }
+    parsed.fixturesCasesPath = value;
+    return 'continue';
+  }
+  if (arg === '--verbose') {
+    parsed.verbose = true;
+    return 'continue';
+  }
+  if (arg === '--planner') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --planner option requires a value.');
+      return 'break';
+    }
+    const mode = value.toLowerCase();
+    if (!planner_utils/* PLANNER_MODES */.Er.includes(mode)) {
+      console.error(
+        `Error: --planner must be one of: ${planner_utils/* PLANNER_MODES */.Er.join(', ')} (got "${value}").`
+      );
+      return 'break';
+    }
+    parsed.plannerMode = mode;
+    return 'continue';
+  }
+  if (arg === '--dry-run') {
+    parsed.dryRun = true;
+    return 'continue';
+  }
+  if (arg === '--debug') {
+    parsed.debug = true;
+    return 'continue';
+  }
+  if (arg === '--explain') {
+    parsed.explain = true;
+    return 'continue';
+  }
+  if (arg === '--estimate') {
+    parsed.estimate = true;
     return 'continue';
   }
   return null;
@@ -86663,163 +86816,6 @@ function parseArgs(argv) {
     if (optionResult === 'break') {
       usageError(parsed);
       break;
-    }
-    if (arg === '--artifacts-dir') {
-      const value = args.shift();
-      if (!value || value.startsWith('-')) {
-        console.error('Error: --artifacts-dir option requires a path.');
-        usageError(parsed);
-        break;
-      }
-      parsed.artifactsDir = value;
-      continue;
-    }
-    if (arg === '--artifact') {
-      const value = args.shift();
-      const eq = value ? value.indexOf('=') : -1;
-      if (!value || value.startsWith('-') || eq <= 0) {
-        console.error('Error: --artifact requires <id>=<path> (e.g. --artifact plan=./plan.md).');
-        usageError(parsed);
-        break;
-      }
-      parsed.cliArtifacts[value.slice(0, eq)] = value.slice(eq + 1);
-      continue;
-    }
-    if (arg === '--ensemble') {
-      // #911 Phase 3 Slice B. Sugar for "concatenate every *.md file under
-      // <dir> into a single review-external artifact". The synthesis skill
-      // (`independent-review-synthesis`) consumes the merged
-      // file. We deliberately do NOT pin specific reviewer names (Claude /
-      // Codex / Cursor) in the flag — file names carry that information, so
-      // the CLI stays provider-agnostic.
-      const value = args.shift();
-      if (!value || value.startsWith('-')) {
-        console.error(
-          'Error: --ensemble requires a directory path (e.g. --ensemble ./.river/reviews).'
-        );
-        usageError(parsed);
-        break;
-      }
-      if (parsed.cliArtifacts['review-external']) {
-        console.warn(
-          'Warning: --ensemble ignored because --artifact review-external=... is already set. Remove the --artifact flag or drop --ensemble.'
-        );
-        continue;
-      }
-      const dir = external_node_path_.resolve(external_node_process_.cwd(), value);
-      let files;
-      try {
-        files = (0,external_node_fs_.readdirSync)(dir)
-          .filter((f) => f.endsWith('.md'))
-          .sort();
-      } catch (err) {
-        console.error(`Error: --ensemble cannot read directory ${value}: ${err.message}`);
-        usageError(parsed);
-        break;
-      }
-      if (files.length === 0) {
-        console.error(`Error: --ensemble found no *.md files in ${value}.`);
-        usageError(parsed);
-        break;
-      }
-      const merged = files
-        .map((f) => `\n\n---\nFrom: ${f}\n---\n\n${(0,external_node_fs_.readFileSync)(external_node_path_.join(dir, f), 'utf8')}`)
-        .join('');
-      const tmpPath = external_node_path_.join(external_node_os_.tmpdir(), `river-ensemble-${external_node_process_.pid}-${Date.now()}.md`);
-      (0,external_node_fs_.writeFileSync)(tmpPath, merged);
-      external_node_process_.on('exit', () => {
-        try {
-          (0,external_node_fs_.unlinkSync)(tmpPath);
-        } catch {
-          // ignore cleanup errors — OS will reclaim tmpdir
-        }
-      });
-      parsed.cliArtifacts['review-external'] = tmpPath;
-      continue;
-    }
-    if (arg === '--phase') {
-      if (!args[0] || args[0].startsWith('-')) {
-        console.error('Error: --phase option requires a value.');
-        usageError(parsed);
-        break;
-      }
-      const value = args.shift();
-      // #1746 follow-up: an invalid phase used to exit 0 and fall back to the
-      // default (`midstream`) downstream in normalizePhase, so the run silently
-      // reviewed a different phase than the one that was typed. PHASES is the
-      // shared vocabulary in src/lib/planner-utils.mjs.
-      //
-      // Case-insensitive, and the lowercased value is what gets stored. That is
-      // `normalizePhase`'s (src/lib/local-runner.mjs) semantics, pinned by
-      // tests/local-runner-internals.test.mjs "normalizes case" — so
-      // `--phase Upstream` really did run as `upstream` and MUST keep working.
-      // `normalizePhase` itself cannot be the validator here: its contract is to
-      // fall back to `midstream` for anything invalid, which is exactly the
-      // silent fallback this guard removes. It also matches the shape the
-      // sibling enum options in this parser already use (--planner / --output /
-      // --format / --fail-on all lowercase before comparing).
-      const phase = value.toLowerCase();
-      if (!planner_utils/* PHASES */.ZG.includes(phase)) {
-        console.error(`Error: --phase must be one of: ${planner_utils/* PHASES */.ZG.join(', ')} (got "${value}").`);
-        usageError(parsed);
-        break;
-      }
-      parsed.phase = phase;
-      // #1759 C2: marks that --phase already validated and set parsed.phase,
-      // so the post-loop RIVER_PHASE check below must not re-derive it from
-      // the (possibly invalid) env var and must not report a second error.
-      parsed.phaseExplicit = true;
-      continue;
-    }
-    if (arg === '--cases') {
-      const value = args.shift();
-      // #1709 Slice 3 (B3): a trailing `--cases` used to null the field, so
-      // eval silently fell back to the DEFAULT fixtures and printed [PASS].
-      if (!value || value.startsWith('-')) {
-        console.error('Error: --cases option requires a path.');
-        usageError(parsed);
-        break;
-      }
-      parsed.fixturesCasesPath = value;
-      continue;
-    }
-    if (arg === '--verbose') {
-      parsed.verbose = true;
-      continue;
-    }
-    if (arg === '--planner') {
-      const value = args.shift();
-      if (!value || value.startsWith('-')) {
-        console.error('Error: --planner option requires a value.');
-        usageError(parsed);
-        break;
-      }
-      const mode = value.toLowerCase();
-      if (!planner_utils/* PLANNER_MODES */.Er.includes(mode)) {
-        console.error(
-          `Error: --planner must be one of: ${planner_utils/* PLANNER_MODES */.Er.join(', ')} (got "${value}").`
-        );
-        usageError(parsed);
-        break;
-      }
-      parsed.plannerMode = mode;
-      continue;
-    }
-    if (arg === '--dry-run') {
-      parsed.dryRun = true;
-      continue;
-    }
-    if (arg === '--debug') {
-      parsed.debug = true;
-      continue;
-    }
-    if (arg === '--explain') {
-      parsed.explain = true;
-      continue;
-    }
-    if (arg === '--estimate') {
-      parsed.estimate = true;
-      continue;
     }
     if (arg === '--max-cost') {
       const value = args.shift();
