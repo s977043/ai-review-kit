@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.106.4](https://github.com/s977043/river-review/compare/v1.106.3...v1.106.4) (2026-09-09)
+
+
+### Bug Fixes
+
+* **tests:** オプション語彙の走査でコメントを除外する ([#2183](https://github.com/s977043/river-review/issues/2183)) ([c4697ae](https://github.com/s977043/river-review/commit/c4697ae952b0b6ca60caf53ba1dab88c6e2fbb98))
+
 ## [1.106.3](https://github.com/s977043/river-review/compare/v1.106.2...v1.106.3) (2026-09-09)
 
 
