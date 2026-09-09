@@ -17,8 +17,17 @@ import process from 'node:process';
 
 import { SEVERITY_RANK } from '../../lib/finding-factory.mjs';
 import { PHASES, PLANNER_MODES } from '../../lib/planner-utils.mjs';
+import { DEPTH_TO_REVIEW_MODE } from '../../lib/review-plan-generator.mjs';
+import { listFlowEntryNames } from '../../lib/flow-loader.mjs';
+import { parseList } from '../../lib/utils.mjs';
 
 const SEVERITY_VALUES = Object.keys(SEVERITY_RANK);
+
+/** Values accepted by `--output`. */
+const OUTPUT_MODES = ['text', 'markdown', 'json', 'yaml', 'html'];
+
+/** Values accepted by `--format` (review plan|exec|verify|route). */
+const REVIEW_FORMATS = ['text', 'markdown', 'json'];
 
 /**
  * 1 トークン分のオプションを読み取る。
@@ -237,6 +246,146 @@ export function consumeOption(parsed, arg, args) {
   }
   if (arg === '--estimate') {
     parsed.estimate = true;
+    return 'continue';
+  }
+  if (arg === '--max-cost') {
+    const value = args.shift();
+    parsed.maxCost = value ? Number.parseFloat(value) : null;
+    if (!Number.isFinite(parsed.maxCost) || parsed.maxCost < 0) {
+      console.error('Error: --max-cost requires a non-negative numeric value.');
+      return 'break';
+    }
+    return 'continue';
+  }
+  if (arg === '--output') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --output option requires a value.');
+      return 'break';
+    }
+    const mode = value.toLowerCase();
+    if (!OUTPUT_MODES.includes(mode)) {
+      console.error(`Error: --output must be one of: ${OUTPUT_MODES.join(', ')} (got "${value}").`);
+      return 'break';
+    }
+    parsed.output = mode;
+    parsed.outputExplicit = true;
+    return 'continue';
+  }
+  if (arg === '--format') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --format option requires a value.');
+      return 'break';
+    }
+    const mode = value.toLowerCase();
+    if (!REVIEW_FORMATS.includes(mode)) {
+      console.error(
+        `Error: --format must be one of: ${REVIEW_FORMATS.join(', ')} (got "${value}").`
+      );
+      return 'break';
+    }
+    parsed.format = mode;
+    parsed.formatExplicit = true;
+    return 'continue';
+  }
+  if (arg === '--context') {
+    const value = args.shift();
+    // #1709 Slice 3: a trailing `--context` used to become parseList(undefined)
+    // = [] in silence (same for --dependency below).
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --context option requires a comma-separated list.');
+      return 'break';
+    }
+    // Deliberately NOT warned here: `--context` is last-wins (this is a plain
+    // assignment, not a merge), so warning per occurrence reports values that
+    // the run never uses — `--context BOGUS --context diff` warned about
+    // BOGUS even though `diff` is what survives. The warning is emitted once
+    // after the loop, against the surviving list (#1958 review, nit 5).
+    parsed.availableContexts = parseList(value);
+    return 'continue';
+  }
+  if (arg === '--dependency') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --dependency option requires a comma-separated list.');
+      return 'break';
+    }
+    parsed.availableDependencies = parseList(value);
+    return 'continue';
+  }
+  if (arg === '--reviewers') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error(
+        'Error: --reviewers option requires a value (e.g. bug-hunter,security-scanner).'
+      );
+      return 'break';
+    }
+    parsed.reviewers = parseList(value);
+    return 'continue';
+  }
+  if (arg === '--baseline') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --baseline option requires a file path.');
+      return 'break';
+    }
+    parsed.baseline = value;
+    return 'continue';
+  }
+  if (arg === '--base') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --base option requires a branch or ref (e.g. --base main).');
+      return 'break';
+    }
+    parsed.base = value;
+    return 'continue';
+  }
+  if (arg === '--entry') {
+    const value = args.shift();
+    if (!value || value.startsWith('-') || value.trim() === '') {
+      console.error(
+        'Error: --entry option requires a review Flow entry name (e.g. --entry review-plan).'
+      );
+      return 'break';
+    }
+    // #2054 PR-3: an unknown entry name is a usage error here, listing the
+    // accepted names, rather than a handler-level exit 3 — the vocabulary is
+    // data (the entry map), so it is read through the single Flow reader.
+    // If the assets cannot be loaded at all the handler reports that with
+    // its own message; parse only validates when it can.
+    let known = null;
+    try {
+      known = listFlowEntryNames();
+    } catch {
+      known = null;
+    }
+    if (known !== null && !known.includes(value)) {
+      console.error(`Error: unknown --entry "${value}". Accepted entries: ${known.join(', ')}.`);
+      return 'break';
+    }
+    parsed.entry = value;
+    return 'continue';
+  }
+  if (arg === '--skill-set') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --skill-set option requires a name (e.g. --skill-set comprehensive).');
+      return 'break';
+    }
+    parsed.skillSet = value;
+    return 'continue';
+  }
+  if (arg === '--depth') {
+    const value = args.shift();
+    const valid = Object.keys(DEPTH_TO_REVIEW_MODE);
+    if (!value || !valid.includes(value)) {
+      console.error(`Error: --depth must be one of: ${valid.join(', ')} (got "${value ?? ''}").`);
+      return 'break';
+    }
+    parsed.depth = value;
     return 'continue';
   }
   return null;

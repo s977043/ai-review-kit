@@ -2428,6 +2428,36 @@ describe('#1709 Slice 3: legitimate flag combinations are not rejected by strict
 // VALID_CASES / CASES は exit code と usageError しか見ないため、「`--` の後ろの
 // `--dry-run` がフラグとして有効になっていない」ことの直接証明にはならない
 // （どちらの実装でも exit 1 になりうる）。ここで parse 結果のフィールドまで見る。
+// -----------------------------------------------------------------------------
+// #2054 PR-3: 不明な `--entry` を拒否するのは parse 層である
+// -----------------------------------------------------------------------------
+//
+// CASES は exit code しか見ないため、この契約を守れない。parse 層の検査を外しても
+// ハンドラ層が同じ exit 1 で落ちるので、`--entry nosuch` の行は緑のまま通る
+// （2026-09-09 実測）。層が入れ替わったことはメッセージにしか出ない。
+describe('#2054 PR-3: an unknown --entry is rejected by the parse layer', () => {
+  test('the message comes from parse, not from the handler', async (t) => {
+    const { dir, cleanup } = await createTempGitRepo({
+      prefix: 'river-entry-parse-layer-',
+      initialFiles: { 'a.txt': 'a\n' },
+      changedFiles: { 'a.txt': 'a\nb\n' },
+    });
+    t.after(cleanup);
+
+    const result = await runCliInProcess(['review', 'plan', '--plan-only', '--entry', 'nosuch'], {
+      cwd: dir,
+      env: { RIVER_OFFLINE: '1', NO_COLOR: '1', RIVER_PHASE: undefined },
+    });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /unknown --entry "nosuch"/);
+    assert.doesNotMatch(
+      result.stderr,
+      /\(known:/,
+      'ハンドラ層のメッセージが出ている。parse 層の検査が働いていない'
+    );
+  });
+});
+
 describe('#1759 A1: `--` ends option parsing', () => {
   test('a flag-looking token after `--` is not activated as a flag', () => {
     const parsed = parseArgs(['run', '--', '--dry-run']);
