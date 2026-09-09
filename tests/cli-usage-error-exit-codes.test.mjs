@@ -2435,6 +2435,44 @@ describe('#1709 Slice 3: legitimate flag combinations are not rejected by strict
 // CASES は exit code しか見ないため、この契約を守れない。parse 層の検査を外しても
 // ハンドラ層が同じ exit 1 で落ちるので、`--entry nosuch` の行は緑のまま通る
 // （2026-09-09 実測）。層が入れ替わったことはメッセージにしか出ない。
+// -----------------------------------------------------------------------------
+// #1755: `review` の副コマンド不足を拒否するのは parse 層である
+// -----------------------------------------------------------------------------
+//
+// これも exit code では守れない。parse 層の検査を外してもハンドラ層が同じ exit 1
+// で落ちるので、CASES の該当行は緑のまま通る（2026-09-09 実測）。差が出るのは
+// 語順の案内文が付くかどうかだけである。
+describe('#1755: a missing review subcommand is rejected by the parse layer', () => {
+  test('the message carries the word-order hint that only parse adds', async (t) => {
+    const { dir, cleanup } = await createTempGitRepo({
+      prefix: 'river-review-subcommand-parse-',
+      initialFiles: { 'a.txt': 'a\n' },
+      changedFiles: { 'a.txt': 'a\nb\n' },
+    });
+    t.after(cleanup);
+
+    const result = await runCliInProcess(['review'], {
+      cwd: dir,
+      env: { RIVER_OFFLINE: '1', NO_COLOR: '1', RIVER_PHASE: undefined },
+    });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /requires a subcommand/);
+    assert.match(
+      result.stderr,
+      /may be written before or after the options/,
+      'parse 層の案内文が出ていない。ハンドラ層が代わりに落としている'
+    );
+    // 呼び出し側が `usageError` を呼んでいることまで見る。落とすと使い方の案内が
+    // 消え、代わりにハンドラ層の同じ文言が二重に出る（exit code は 1 のまま）。
+    assert.match(result.stderr, /^Usage: river review /m, 'usageError が呼ばれていない');
+    assert.equal(
+      result.stderr.match(/requires a subcommand/g)?.length,
+      1,
+      'ハンドラ層のメッセージが重複して出ている'
+    );
+  });
+});
+
 describe('#2054 PR-3: an unknown --entry is rejected by the parse layer', () => {
   test('the message comes from parse, not from the handler', async (t) => {
     const { dir, cleanup } = await createTempGitRepo({

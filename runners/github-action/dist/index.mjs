@@ -60987,8 +60987,6 @@ async function loadProjectRules(repoRoot, options = {}) {
 var risk_map = __nccwpck_require__(572);
 // EXTERNAL MODULE: ./src/lib/utils.mjs
 var utils = __nccwpck_require__(9746);
-// EXTERNAL MODULE: ./src/lib/planner-utils.mjs
-var planner_utils = __nccwpck_require__(1013);
 // EXTERNAL MODULE: ./src/lib/finding-factory.mjs
 var finding_factory = __nccwpck_require__(1535);
 // EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
@@ -61262,6 +61260,8 @@ function consumeEagerCommand(parsed, arg, args) {
   }
 }
 
+// EXTERNAL MODULE: ./src/lib/planner-utils.mjs
+var planner_utils = __nccwpck_require__(1013);
 ;// CONCATENATED MODULE: ./src/cli/parse/options.mjs
 // `parseArgs` のオプション連鎖。src/cli.mjs から順序を保ったまま純粋に移設して
 // いる（リファクタリング Step 4）。判定も副作用も変えていない。
@@ -61705,6 +61705,89 @@ function consumeOption(parsed, arg, args) {
     return 'continue';
   }
   return null;
+}
+
+;// CONCATENATED MODULE: ./src/cli/parse/postprocess.mjs
+// `parseArgs` のループ後の検査。src/cli.mjs から純粋に移設したもので、判定も
+// 副作用も変えていない（リファクタリング Step 5）。
+//
+// `usageError` は移していない。他の parse モジュールと同じ扱いで、各関数は
+// stderr への出力までを行い、usage error にすべきことを戻り値の `true` で返す。
+// 呼び出し側が続けて `usageError` を呼ぶので、出力の順序は移設前と同じである。
+
+
+
+
+
+
+/**
+ * `review` が副コマンドを 1 つ取っていることを確かめる。
+ *
+ * @param {object} parsed
+ * @param {boolean} terminatorTookPositional `--` 経由で positional を取り込んだか
+ * @returns {boolean} usage error にすべきとき true
+ */
+function checkReviewSubcommand(parsed, terminatorTookPositional) {
+  // `review` needs one of plan | exec | verify | route. The handler reported
+  // both the missing and the unknown case with exit 3 — the code this project
+  // reserves for the `--gate` ESCALATE decision and for handler-level
+  // configuration errors — so an argument-order typo read as "a human must
+  // look at this" (#1755). Detected here instead, which makes it exit 1 like
+  // every other usage error (#1709 contract).
+  if (
+    parsed.command === 'review' &&
+    !parsed.usageError &&
+    !REVIEW_SUBCOMMANDS.has(parsed.reviewSubcommand)
+  ) {
+    // A path taken from after `--` is NOT a candidate subcommand: the caller
+    // declared it to be a path. Reporting it as one produced the contradiction
+    // `river review -- plan` -> `"plan" is not a river review subcommand
+    // (plan | exec | verify | route)`.
+    const got =
+      parsed.reviewSubcommand ??
+      (parsed.targetConsumed && !terminatorTookPositional ? parsed.target : null);
+    console.error(
+      (got === null
+        ? 'Error: river review requires a subcommand (plan | exec | verify | route).'
+        : `Error: "${got}" is not a river review subcommand (plan | exec | verify | route).`) +
+        ' The subcommand may be written before or after the options —' +
+        ' `river review plan --plan-only` and `river review --plan-only plan` are both accepted.'
+    );
+    return true;
+  }
+  return false;
+}
+
+/**
+ * `--phase` が明示されていないときに `RIVER_PHASE` を反映する。
+ *
+ * @param {object} parsed
+ * @returns {boolean} usage error にすべきとき true
+ */
+function applyPhaseFallback(parsed) {
+  // #1759 C2: RIVER_PHASE used to skip validation entirely and propagate an
+  // invalid value straight through to the printed phase with exit 0, unlike
+  // --phase which already validates against PHASES above. Reuse that same
+  // vocabulary and the same case-insensitive normalization here instead of
+  // writing a second check (CLAUDE.md "Import the SSoT, never re-derive it").
+  //
+  // Only runs when --phase did NOT already set and validate parsed.phase
+  // (parsed.phaseExplicit) and when RIVER_PHASE was actually set to a
+  // non-empty string — unset or empty must keep falling back to the default
+  // ('midstream'), matching the object-literal default above and --phase's
+  // own "not required" contract.
+  if (!parsed.usageError && !parsed.phaseExplicit && external_node_process_.env.RIVER_PHASE) {
+    const envPhase = external_node_process_.env.RIVER_PHASE.toLowerCase();
+    if (!planner_utils/* PHASES */.ZG.includes(envPhase)) {
+      console.error(
+        `Error: RIVER_PHASE must be one of: ${planner_utils/* PHASES */.ZG.join(', ')} (got "${external_node_process_.env.RIVER_PHASE}").`
+      );
+      return true;
+    } else {
+      parsed.phase = envPhase;
+    }
+  }
+  return false;
 }
 
 // EXTERNAL MODULE: ./src/lib/diff-processor.mjs
@@ -85514,6 +85597,7 @@ async function runReplay(parsed, output) {
 
 
 
+
 function printHelp() {
   console.log(`Usage: river <command> <path> [options]
 
@@ -87044,31 +87128,7 @@ function parseArgs(argv) {
     warnUnknownInputContexts(parsed.availableContexts);
   }
 
-  // `review` needs one of plan | exec | verify | route. The handler reported
-  // both the missing and the unknown case with exit 3 — the code this project
-  // reserves for the `--gate` ESCALATE decision and for handler-level
-  // configuration errors — so an argument-order typo read as "a human must
-  // look at this" (#1755). Detected here instead, which makes it exit 1 like
-  // every other usage error (#1709 contract).
-  if (
-    parsed.command === 'review' &&
-    !parsed.usageError &&
-    !REVIEW_SUBCOMMANDS.has(parsed.reviewSubcommand)
-  ) {
-    // A path taken from after `--` is NOT a candidate subcommand: the caller
-    // declared it to be a path. Reporting it as one produced the contradiction
-    // `river review -- plan` -> `"plan" is not a river review subcommand
-    // (plan | exec | verify | route)`.
-    const got =
-      parsed.reviewSubcommand ??
-      (parsed.targetConsumed && !terminatorTookPositional ? parsed.target : null);
-    console.error(
-      (got === null
-        ? 'Error: river review requires a subcommand (plan | exec | verify | route).'
-        : `Error: "${got}" is not a river review subcommand (plan | exec | verify | route).`) +
-        ' The subcommand may be written before or after the options —' +
-        ' `river review plan --plan-only` and `river review --plan-only plan` are both accepted.'
-    );
+  if (checkReviewSubcommand(parsed, terminatorTookPositional)) {
     usageError(parsed);
   }
 
@@ -87079,27 +87139,8 @@ function parseArgs(argv) {
   // early when parsed.usageError is already set).
   checkCommandScopedOptions(parsed);
 
-  // #1759 C2: RIVER_PHASE used to skip validation entirely and propagate an
-  // invalid value straight through to the printed phase with exit 0, unlike
-  // --phase which already validates against PHASES above. Reuse that same
-  // vocabulary and the same case-insensitive normalization here instead of
-  // writing a second check (CLAUDE.md "Import the SSoT, never re-derive it").
-  //
-  // Only runs when --phase did NOT already set and validate parsed.phase
-  // (parsed.phaseExplicit) and when RIVER_PHASE was actually set to a
-  // non-empty string — unset or empty must keep falling back to the default
-  // ('midstream'), matching the object-literal default above and --phase's
-  // own "not required" contract.
-  if (!parsed.usageError && !parsed.phaseExplicit && external_node_process_.env.RIVER_PHASE) {
-    const envPhase = external_node_process_.env.RIVER_PHASE.toLowerCase();
-    if (!planner_utils/* PHASES */.ZG.includes(envPhase)) {
-      console.error(
-        `Error: RIVER_PHASE must be one of: ${planner_utils/* PHASES */.ZG.join(', ')} (got "${external_node_process_.env.RIVER_PHASE}").`
-      );
-      usageError(parsed);
-    } else {
-      parsed.phase = envPhase;
-    }
+  if (applyPhaseFallback(parsed)) {
+    usageError(parsed);
   }
 
   return parsed;
