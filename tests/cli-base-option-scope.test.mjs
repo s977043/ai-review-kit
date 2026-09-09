@@ -90,11 +90,15 @@ describe('#2065 --base command-scoped allowlist', () => {
       })
       .map((abs) => relative(REPO_ROOT, abs).split('\\').join('/'))
       .sort();
+    // src/cli/parse/options.mjs はオプション連鎖の移設先で、面ではなく parse 層の
+    // 一部である（リファクタリング Step 4）。値を読むのではなく `--base` を
+    // 受理して `parsed.base` へ書く側にあたる。
     assert.deepEqual(readers, [
       'src/cli.mjs',
       'src/cli/commands/review.mjs',
       'src/cli/commands/run.mjs',
       'src/cli/commands/skills.mjs',
+      'src/cli/parse/options.mjs',
       'src/lib/git.mjs',
       'src/lib/local-runner.mjs',
     ]);
@@ -331,7 +335,12 @@ describe('#2054 --entry command-scoped allowlist', () => {
       .filter((abs) => /parsed\??\.entry\b/.test(readFileSync(abs, 'utf8')))
       .map((abs) => relative(REPO_ROOT, abs).split('\\').join('/'))
       .sort();
-    assert.deepEqual(readers, ['src/cli.mjs', 'src/cli/commands/review.mjs']);
+    // src/cli/parse/options.mjs は上と同じ理由で parse 層の一部。
+    assert.deepEqual(readers, [
+      'src/cli.mjs',
+      'src/cli/commands/review.mjs',
+      'src/cli/parse/options.mjs',
+    ]);
   });
 
   for (const { surface, argv } of USAGE_ERROR_SURFACES) {
