@@ -232,7 +232,12 @@ const CONTRACTS = {
 // （`COMMAND_SCOPED_OPTIONS`）で拒否される形へ変わったためである。受理形
 // `review plan --plan-only --entry review-plan` は exit 1 -> 0 へ動き、
 // VALID_CASES 側へ pin した（97 -> 98）。
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 168, C4: 1 };
+// 2026-09-09 の pin 追加で C3 が 168 -> 173 になった。`--artifact` の不正形 4 種
+// （値欠落 / `=` なし / `=` が先頭 / 値が `-` 始まり）と、`review plan` 面の代表 1 形
+// である。**exit code は動いていない**（追加前後とも 5 形すべて exit 1）。収録の理由は
+// 変異注入で穴が実測されたことにある。入口の検査を `if (false)` へ落としてもフル
+// スイート 4718 件が全緑で、実出力は exit 1 から exit 3 へ変わっていた。
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 173, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
@@ -378,6 +383,49 @@ const CASES = [
     surface: 'review exec',
     kind: 'invalid-value',
     argv: ['review', 'exec', '--dry-run', '--output', 'bogus'],
+    contract: 'C3',
+  },
+  // `--artifact` の不正形 4 種（範囲レビュー由来の pin 追加、2026-09-09）。
+  // 実装は値を 1 つ shift したうえで「値がある / `-` 始まりでない / `=` の位置が
+  // 1 以上」の 3 条件を検査し、外れたら usage error にする。この検査を
+  // `if (false)` にする変異を入れてもフルスイート 4718 件が全緑のままだった。
+  // no-op ではない: `review plan --artifact bogus` の実出力が
+  // exit 1 `Error: --artifact requires <id>=<path> ...` から
+  // exit 3 `... supports only --plan-only ...` へ変わる。
+  // #2160 / #2162 で `--artifact` の解決順と配線を触った直後に、その入口の
+  // 検証だけが pin されていなかったため、4 条件を分けて収録する。
+  {
+    surface: 'review exec',
+    kind: 'value-missing',
+    argv: ['review', 'exec', '--entry', 'review-plan', '--artifact'],
+    contract: 'C3',
+  },
+  {
+    // `=` を含まない。id と path に割れないので受理できない。
+    surface: 'review exec',
+    kind: 'invalid-value',
+    argv: ['review', 'exec', '--entry', 'review-plan', '--artifact', 'bogus'],
+    contract: 'C3',
+  },
+  {
+    // `=` が先頭にあり id が空。`eq <= 0` の境界そのもの。
+    surface: 'review exec',
+    kind: 'invalid-value',
+    argv: ['review', 'exec', '--entry', 'review-plan', '--artifact', '=p.md'],
+    contract: 'C3',
+  },
+  {
+    // 次のオプションを値として飲まない。値欠落を「`-` 始まり」で弁別する枝。
+    surface: 'review exec',
+    kind: 'invalid-value',
+    argv: ['review', 'exec', '--entry', 'review-plan', '--artifact', '--output'],
+    contract: 'C3',
+  },
+  {
+    // 面を 1 つに絞らない。`review plan` でも同じ検査が働く。
+    surface: 'review plan',
+    kind: 'invalid-value',
+    argv: ['review', 'plan', '--plan-only', '--artifact', 'bogus'],
     contract: 'C3',
   },
   {
@@ -1671,11 +1719,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 169 usage-error cases and every row is unique', () => {
+  test('the matrix pins 174 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      169,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件 + #2065 の --base を読まない面での拒否 44 件（228 形の掃引で exit code が動いたのは 53 件。重複指定は単発形と等価なので代表 1 件のみ収録し、runs diff の 3 件は逆に変化形ではないが契約として収録している）+ #2081 の skills 後置サブコマンド 4 件 + 同 round 3 のパス併記形 1 件 + 範囲レビュー v1.100.0 minor の後置 resolve 固有オプション 1 件 + #2054 PR-3 の --entry 3 件（値欠落 / 未知 entry / doctor で拒否）'
+      174,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件 + #2065 の --base を読まない面での拒否 44 件（228 形の掃引で exit code が動いたのは 53 件。重複指定は単発形と等価なので代表 1 件のみ収録し、runs diff の 3 件は逆に変化形ではないが契約として収録している）+ #2081 の skills 後置サブコマンド 4 件 + 同 round 3 のパス併記形 1 件 + 範囲レビュー v1.100.0 minor の後置 resolve 固有オプション 1 件 + #2054 PR-3 の --entry 3 件（値欠落 / 未知 entry / doctor で拒否）+ 2026-09-09 の --artifact 不正形 5 件（review exec の 4 種と review plan の代表 1 形。変異注入で穴が実測されたための追加で exit code は動いていない）'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -1710,7 +1758,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     );
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:168 / C4:1 (0 of 169 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:173 / C4:1 (0 of 174 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
