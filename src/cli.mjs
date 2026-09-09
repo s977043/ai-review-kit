@@ -277,9 +277,6 @@ const PROMOTE_SHARED_OPTIONS = new Set(['--output', '--dry-run', '-h', '--help',
  */
 const SEVERITY_VALUES = Object.keys(SEVERITY_RANK);
 
-/** Values accepted by `skills list --source`. */
-const SKILLS_LIST_SOURCES = ['rr', 'agent', 'all'];
-
 /**
  * Fingerprint algorithms accepted by `suppression add --fingerprint-algo`
  * (#1797). Mirrors the `fingerprintAlgo` enum of
@@ -1552,57 +1549,6 @@ function parseArgs(argv) {
     if (optionResult === 'break') {
       usageError(parsed);
       break;
-    }
-    if (arg === '--save') {
-      parsed.save = true;
-      continue;
-    }
-    // Skills subcommand options
-    if (arg === '--from') {
-      const value = args.shift();
-      // #1709 Slice 3: a trailing `--from` / `--to` used to null the field in
-      // silence, so `skills import --from` ran against the default instead.
-      if (!value || value.startsWith('-')) {
-        console.error('Error: --from option requires a path.');
-        usageError(parsed);
-        break;
-      }
-      parsed.fromPath = value;
-      continue;
-    }
-    if (arg === '--to') {
-      const value = args.shift();
-      if (!value || value.startsWith('-')) {
-        console.error('Error: --to option requires a path.');
-        usageError(parsed);
-        break;
-      }
-      parsed.toPath = value;
-      continue;
-    }
-    if (arg === '--strict') {
-      parsed.validationMode = 'strict';
-      continue;
-    }
-    if (arg === '--loose') {
-      parsed.validationMode = 'loose';
-      continue;
-    }
-    if (arg === '--source') {
-      const value = args.shift();
-      if (!value || !SKILLS_LIST_SOURCES.includes(value)) {
-        console.error(
-          `Error: --source must be one of: ${SKILLS_LIST_SOURCES.join(', ')} (got "${value}").`
-        );
-        usageError(parsed);
-        break;
-      }
-      parsed.listSource = value;
-      continue;
-    }
-    if (arg === '--include-assets') {
-      parsed.includeAssets = true;
-      continue;
     }
     if (arg === '-h' || arg === '--help') {
       parsed.command = 'help';

@@ -29,6 +29,9 @@ const OUTPUT_MODES = ['text', 'markdown', 'json', 'yaml', 'html'];
 /** Values accepted by `--format` (review plan|exec|verify|route). */
 const REVIEW_FORMATS = ['text', 'markdown', 'json'];
 
+/** Values accepted by `skills list --source`. */
+const SKILLS_LIST_SOURCES = ['rr', 'agent', 'all'];
+
 /**
  * 1 トークン分のオプションを読み取る。
  *
@@ -386,6 +389,54 @@ export function consumeOption(parsed, arg, args) {
       return 'break';
     }
     parsed.depth = value;
+    return 'continue';
+  }
+  if (arg === '--save') {
+    parsed.save = true;
+    return 'continue';
+  }
+  // Skills subcommand options
+  if (arg === '--from') {
+    const value = args.shift();
+    // #1709 Slice 3: a trailing `--from` / `--to` used to null the field in
+    // silence, so `skills import --from` ran against the default instead.
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --from option requires a path.');
+      return 'break';
+    }
+    parsed.fromPath = value;
+    return 'continue';
+  }
+  if (arg === '--to') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --to option requires a path.');
+      return 'break';
+    }
+    parsed.toPath = value;
+    return 'continue';
+  }
+  if (arg === '--strict') {
+    parsed.validationMode = 'strict';
+    return 'continue';
+  }
+  if (arg === '--loose') {
+    parsed.validationMode = 'loose';
+    return 'continue';
+  }
+  if (arg === '--source') {
+    const value = args.shift();
+    if (!value || !SKILLS_LIST_SOURCES.includes(value)) {
+      console.error(
+        `Error: --source must be one of: ${SKILLS_LIST_SOURCES.join(', ')} (got "${value}").`
+      );
+      return 'break';
+    }
+    parsed.listSource = value;
+    return 'continue';
+  }
+  if (arg === '--include-assets') {
+    parsed.includeAssets = true;
     return 'continue';
   }
   return null;
