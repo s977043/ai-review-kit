@@ -10,7 +10,13 @@
 // ループを抜けるべきことを `'break'` で返す。呼び出し側が続けて `usageError` を
 // 呼ぶので、出力の順序は移設前と同じである。
 
+import { readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import process from 'node:process';
+
 import { SEVERITY_RANK } from '../../lib/finding-factory.mjs';
+import { PHASES, PLANNER_MODES } from '../../lib/planner-utils.mjs';
 
 const SEVERITY_VALUES = Object.keys(SEVERITY_RANK);
 
@@ -84,6 +90,153 @@ export function consumeOption(parsed, arg, args) {
   }
   if (arg === '--quiet') {
     parsed.quiet = true;
+    return 'continue';
+  }
+  if (arg === '--artifacts-dir') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --artifacts-dir option requires a path.');
+      return 'break';
+    }
+    parsed.artifactsDir = value;
+    return 'continue';
+  }
+  if (arg === '--artifact') {
+    const value = args.shift();
+    const eq = value ? value.indexOf('=') : -1;
+    if (!value || value.startsWith('-') || eq <= 0) {
+      console.error('Error: --artifact requires <id>=<path> (e.g. --artifact plan=./plan.md).');
+      return 'break';
+    }
+    parsed.cliArtifacts[value.slice(0, eq)] = value.slice(eq + 1);
+    return 'continue';
+  }
+  if (arg === '--ensemble') {
+    // #911 Phase 3 Slice B. Sugar for "concatenate every *.md file under
+    // <dir> into a single review-external artifact". The synthesis skill
+    // (`independent-review-synthesis`) consumes the merged
+    // file. We deliberately do NOT pin specific reviewer names (Claude /
+    // Codex / Cursor) in the flag — file names carry that information, so
+    // the CLI stays provider-agnostic.
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error(
+        'Error: --ensemble requires a directory path (e.g. --ensemble ./.river/reviews).'
+      );
+      return 'break';
+    }
+    if (parsed.cliArtifacts['review-external']) {
+      console.warn(
+        'Warning: --ensemble ignored because --artifact review-external=... is already set. Remove the --artifact flag or drop --ensemble.'
+      );
+      return 'continue';
+    }
+    const dir = path.resolve(process.cwd(), value);
+    let files;
+    try {
+      files = readdirSync(dir)
+        .filter((f) => f.endsWith('.md'))
+        .sort();
+    } catch (err) {
+      console.error(`Error: --ensemble cannot read directory ${value}: ${err.message}`);
+      return 'break';
+    }
+    if (files.length === 0) {
+      console.error(`Error: --ensemble found no *.md files in ${value}.`);
+      return 'break';
+    }
+    const merged = files
+      .map((f) => `\n\n---\nFrom: ${f}\n---\n\n${readFileSync(path.join(dir, f), 'utf8')}`)
+      .join('');
+    const tmpPath = path.join(os.tmpdir(), `river-ensemble-${process.pid}-${Date.now()}.md`);
+    writeFileSync(tmpPath, merged);
+    process.on('exit', () => {
+      try {
+        unlinkSync(tmpPath);
+      } catch {
+        // ignore cleanup errors — OS will reclaim tmpdir
+      }
+    });
+    parsed.cliArtifacts['review-external'] = tmpPath;
+    return 'continue';
+  }
+  if (arg === '--phase') {
+    if (!args[0] || args[0].startsWith('-')) {
+      console.error('Error: --phase option requires a value.');
+      return 'break';
+    }
+    const value = args.shift();
+    // #1746 follow-up: an invalid phase used to exit 0 and fall back to the
+    // default (`midstream`) downstream in normalizePhase, so the run silently
+    // reviewed a different phase than the one that was typed. PHASES is the
+    // shared vocabulary in src/lib/planner-utils.mjs.
+    //
+    // Case-insensitive, and the lowercased value is what gets stored. That is
+    // `normalizePhase`'s (src/lib/local-runner.mjs) semantics, pinned by
+    // tests/local-runner-internals.test.mjs "normalizes case" — so
+    // `--phase Upstream` really did run as `upstream` and MUST keep working.
+    // `normalizePhase` itself cannot be the validator here: its contract is to
+    // fall back to `midstream` for anything invalid, which is exactly the
+    // silent fallback this guard removes. It also matches the shape the
+    // sibling enum options in this parser already use (--planner / --output /
+    // --format / --fail-on all lowercase before comparing).
+    const phase = value.toLowerCase();
+    if (!PHASES.includes(phase)) {
+      console.error(`Error: --phase must be one of: ${PHASES.join(', ')} (got "${value}").`);
+      return 'break';
+    }
+    parsed.phase = phase;
+    // #1759 C2: marks that --phase already validated and set parsed.phase,
+    // so the post-loop RIVER_PHASE check below must not re-derive it from
+    // the (possibly invalid) env var and must not report a second error.
+    parsed.phaseExplicit = true;
+    return 'continue';
+  }
+  if (arg === '--cases') {
+    const value = args.shift();
+    // #1709 Slice 3 (B3): a trailing `--cases` used to null the field, so
+    // eval silently fell back to the DEFAULT fixtures and printed [PASS].
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --cases option requires a path.');
+      return 'break';
+    }
+    parsed.fixturesCasesPath = value;
+    return 'continue';
+  }
+  if (arg === '--verbose') {
+    parsed.verbose = true;
+    return 'continue';
+  }
+  if (arg === '--planner') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --planner option requires a value.');
+      return 'break';
+    }
+    const mode = value.toLowerCase();
+    if (!PLANNER_MODES.includes(mode)) {
+      console.error(
+        `Error: --planner must be one of: ${PLANNER_MODES.join(', ')} (got "${value}").`
+      );
+      return 'break';
+    }
+    parsed.plannerMode = mode;
+    return 'continue';
+  }
+  if (arg === '--dry-run') {
+    parsed.dryRun = true;
+    return 'continue';
+  }
+  if (arg === '--debug') {
+    parsed.debug = true;
+    return 'continue';
+  }
+  if (arg === '--explain') {
+    parsed.explain = true;
+    return 'continue';
+  }
+  if (arg === '--estimate') {
+    parsed.estimate = true;
     return 'continue';
   }
   return null;
