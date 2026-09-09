@@ -897,7 +897,14 @@ test('KNOWN_OPTION_TOKENS covers exactly the tokens parseArgs compares (#1797)',
     .filter((name) => name.endsWith('.mjs'))
     .map((name) => readFileSync(new URL(name, parseDir), 'utf8'));
   assert.ok(parseSources.length > 0, 'src/cli/parse/ に .mjs が 1 件も無い');
-  const comparedSource = [source, ...parseSources].join('\n');
+  // コメントを落としてから比較する。走査は正規表現なので、コメント内に書かれた
+  // `arg === '--x'` という**説明のための文字列**まで「parseArgs が解釈する
+  // トークン」として拾ってしまう。src/cli/parse/ をディレクトリごと読むように
+  // した結果、無関係なモジュールの説明コメント 1 行でこの検査が落ちる状態に
+  // なっていた（2026-09-09 の範囲レビュー minor、再現済み）。
+  const stripComments = (text) =>
+    text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[^\n]*?\/\/.*$/gm, '');
+  const comparedSource = [source, ...parseSources].map(stripComments).join('\n');
   const setStart = source.indexOf('const KNOWN_OPTION_TOKENS');
   const setEnd = source.indexOf('function takeFreeTextValue');
   assert.ok(setStart > 0 && setEnd > setStart, 'KNOWN_OPTION_TOKENS の定義が見つからない');
