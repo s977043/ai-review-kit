@@ -61049,6 +61049,219 @@ function takePositionalPath(parsed, token) {
   return true;
 }
 
+;// CONCATENATED MODULE: ./src/cli/parse/terminator.mjs
+// POSIX の `--` ターミネータの読み取り。src/cli.mjs から純粋に移設したもので、
+// 判定も副作用も変えていない（リファクタリング Step 2）。
+//
+// `usageError` は移していない。あれは usage hint を stdout へ出しつつ
+// `parsed.usageError` を立てる副作用で、`parseArgs` の 70 箇所以上から呼ばれる。
+// ここへ引数で渡すと依存注入になるため、本関数は stderr へのメッセージ出力までを
+// 行い、usage error であることを戻り値で返す。呼び出し側が続けて `usageError` を
+// 呼ぶので、出力の順序は移設前と同じである。
+
+
+
+
+
+/**
+ * `--` に続くトークンを全て positional path として読み切る。
+ *
+ * @param {object} parsed
+ * @param {string[]} args `--` の次のトークンから始まる残りの argv（破壊的に shift する）
+ * @returns {{ error: boolean, tookPositional: boolean }}
+ *   `error` が true のとき、呼び出し側は `usageError(parsed)` を呼んで解析を打ち切る。
+ *   `tookPositional` は `--` 経由で positional を取り込んだかどうか。
+ */
+function consumeTerminator(parsed, args) {
+  let error = false;
+  let tookPositional = false;
+  while (args.length) {
+    const positional = args.shift();
+    if (parsed.targetConsumed || !acceptsPositionalPath(parsed)) {
+      console.error(`Error: unexpected argument "${positional}".`);
+      error = true;
+      break;
+    }
+    // The token is a path by construction, so it must BE one. Without this
+    // check `river evolve aggregate -- nosuchdir` exited 0 with an empty
+    // aggregate: `--` bypasses the eager branch's "a non-existent,
+    // non-subcommand token is a mistyped subcommand" rejection, turning a
+    // mistyped path into a silent empty result. #1746 W2 already treated
+    // "exit 0 while silently falling back" as a regression.
+    if (!(0,external_node_fs_.existsSync)(positional)) {
+      console.error(
+        `Error: "${positional}" does not exist ` +
+          '(every token after `--` is read as a path, never as an option or a subcommand).'
+      );
+      error = true;
+      break;
+    }
+    takePositionalPath(parsed, positional);
+    tookPositional = true;
+  }
+  return { error, tookPositional };
+}
+
+;// CONCATENATED MODULE: ./src/cli/parse/vocabulary.mjs
+// `parseArgs` が使うサブコマンド語彙。src/cli.mjs から純粋に移設したもので、
+// 集合の中身も JSDoc も変えていない（リファクタリング Step 3a）。
+//
+// ここに置くのはリテラルな集合だけである。`EAGER_COMMANDS` は `COMMAND_USAGE`
+// から導出しており、移すと使用箇所の表そのものを連れてくることになるため
+// src/cli.mjs に残した。
+
+/**
+ * Eager-branch commands that take a subcommand word and never a positional
+ * path. The arms above the fall-through in the eager branch have already
+ * consumed their subcommand word, so the fall-through (which reads a
+ * positional `<path>`) must skip exactly these.
+ */
+const SUBCOMMAND_ONLY_COMMANDS = new Set(['runs', 'suppression', 'feedback', 'promote']);
+
+/**
+ * `skills` subcommands (`skills import|export|list|resolve` take options, not a
+ * positional path — see `acceptsPositionalPath`).
+ */
+const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
+
+/**
+ * `evolve` subcommands (#1574 P1 `aggregate` / P2 `replay`, ADR-006
+ * `prompt-compare` / `prompt-ab`). Matching against a known set (rather than
+ * "first non-flag token") keeps `river evolve <path>` working.
+ */
+const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay', 'prompt-compare', 'prompt-ab']);
+
+/**
+ * `promote` subcommands that take an optional positional candidate id.
+ */
+const PROMOTE_ID_SUBCOMMANDS = new Set([
+  'approve',
+  'reject',
+  'template',
+  'review-effectiveness',
+]);
+
+/**
+ * `river review` subcommands (#802 Phase 3), at module scope because BOTH the
+ * eager branch inside `parseArgs` and `takeTrailingPositional` below need it:
+ * `review` had no vocabulary at all, so a subcommand written after the options
+ * was swallowed as the path (#1755).
+ *
+ * `SKILLS_SUBCOMMANDS` / `EVOLVE_SUBCOMMANDS` sit alongside it above. Hoisting
+ * them out of `parseArgs` is a pure relocation: `takeTrailingPositional`
+ * already consulted `REVIEW_SUBCOMMANDS` before the hoist, but for `evolve`
+ * it only approximated the eager branch's decision with `existsSync` (#1759
+ * B1). `takeTrailingPositional` now checks `EVOLVE_SUBCOMMANDS` first, the
+ * same priority the eager branch uses, so `river evolve aggregate --min 2`
+ * and `river evolve --min 2 aggregate` agree even when a directory named
+ * `aggregate` exists in cwd.
+ */
+const REVIEW_SUBCOMMANDS = new Set(['plan', 'exec', 'verify', 'route']);
+
+/**
+ * `runs` subcommands, as dispatched by `runRunsCommand`
+ * (`src/cli/commands/runs.mjs`): `list` / `diff` / `summary` / `digest`, with a
+ * MISSING subcommand behaving as `list` (`:21` — `!parsed.runsSubcommand ||
+ * parsed.runsSubcommand === 'list'`). Mirrors the vocabulary in that handler's
+ * `Unknown runs subcommand: … Use: list | diff | summary | digest` message,
+ * the same "mirror + pin" arrangement `SUPPRESSION_FINGERPRINT_ALGOS` uses
+ * against its schema; `tests/cli-base-option-scope.test.mjs` pins the two
+ * together by running the CLI, so this list cannot drift from the handler.
+ *
+ * Needed at parse time only so `checkCommandScopedOptions` can tell a real
+ * surface from a typo'd subcommand word (see `isNamedSurface`).
+ */
+const RUNS_SUBCOMMANDS = new Set(['list', 'diff', 'summary', 'digest']);
+
+/**
+ * `feedback` / `suppression` accept exactly one subcommand word each, and a
+ * missing one is NOT a surface — both handlers answer
+ * ``only `river feedback add` is supported`` / ``only `river suppression add`
+ * is supported`` (`src/cli/commands/feedback.mjs:61`,
+ * `src/cli/commands/suppression.mjs:20`). Pinned by the same test.
+ */
+const FEEDBACK_SUBCOMMANDS = new Set(['add']);
+const SUPPRESSION_SUBCOMMANDS = new Set(['add']);
+
+;// CONCATENATED MODULE: ./src/cli/parse/eager-command.mjs
+// eager コマンド分岐の本体。src/cli.mjs から純粋に移設したもので、判定も副作用も
+// 変えていない（リファクタリング Step 3 後半）。
+//
+// `EAGER_COMMANDS` によるガードは呼び出し側に残してある。あの集合は
+// `COMMAND_USAGE` から導出しており、移すと使用箇所の表そのものを連れてくる。
+// ガードを残せば本関数の依存はリテラルな語彙集合だけで済む。
+
+
+
+
+
+/**
+ * コマンド語の直後に続く副コマンド語 / positional path を読み取る。
+ *
+ * 呼び出し側は `EAGER_COMMANDS.has(arg)` を確かめてから呼ぶこと。
+ *
+ * @param {object} parsed
+ * @param {string} arg 直前に読んだコマンド語
+ * @param {string[]} args 残りの argv（破壊的に shift する）
+ */
+function consumeEagerCommand(parsed, arg, args) {
+  parsed.command = arg;
+  // Check for skills subcommands (import/export/list)
+  if (arg === 'skills' && args[0] && SKILLS_SUBCOMMANDS.has(args[0])) {
+    parsed.skillsSubcommand = args.shift();
+  } else if (arg === 'evolve') {
+    if (args[0] && EVOLVE_SUBCOMMANDS.has(args[0])) {
+      parsed.evolveSubcommand = args.shift();
+    }
+    // `replay` takes NO positional: its dataset comes from --spec. Letting
+    // the first token become `parsed.target` would make the command accept
+    // and silently ignore it (`river evolve replay ./typo.json --spec x`).
+    if (parsed.evolveSubcommand !== 'replay' && args[0] && !args[0].startsWith('-')) {
+      const token = args.shift();
+      // A mistyped subcommand (`agregate`) must not be swallowed as a path
+      // and reported as an empty, successful aggregate. Anything that is
+      // neither a known subcommand nor an existing path is an error.
+      if (!parsed.evolveSubcommand && !(0,external_node_fs_.existsSync)(token)) {
+        parsed.evolveSubcommand = token; // handler rejects it with exit 1
+      } else {
+        parsed.target = token;
+        parsed.targetConsumed = true;
+      }
+    }
+    // Surplus positionals are a usage error, never silently discarded.
+    while (args[0] && !args[0].startsWith('-')) {
+      parsed.evolveExtraArgs.push(args.shift());
+    }
+  } else if (arg === 'runs' && args[0] && !args[0].startsWith('-')) {
+    parsed.runsSubcommand = args.shift(); // list | diff | summary | digest
+    // `diff` takes two or more positional run IDs, which may be written
+    // before, after, or interleaved with options (e.g. `--output json`).
+    // Collecting them eagerly here (as a fixed shift-two-then-scan) used to
+    // swallow a leading option as a run ID (#1759 B2): `runs diff --output
+    // json r1 r2` shifted "--output" into runsId1 and "json" into runsId2,
+    // then tried to open a run named "--output" and exited 1 with ENOENT.
+    // Collection now happens token-by-token below (near the promote/evolve
+    // dispatches), so options are left for the shared option handlers.
+  } else if (arg === 'suppression' && args[0] && !args[0].startsWith('-')) {
+    parsed.suppressionSubcommand = args.shift(); // add (only one for now)
+  } else if (arg === 'feedback' && args[0] && !args[0].startsWith('-')) {
+    parsed.feedbackSubcommand = args.shift(); // add (only one for now)
+  } else if (arg === 'promote' && args[0] && !args[0].startsWith('-')) {
+    parsed.promoteSubcommand = args.shift(); // propose | list | approve | reject | template | retire | review-effectiveness
+    // approve/reject/template/review-effectiveness take an optional positional candidate id.
+    if (
+      PROMOTE_ID_SUBCOMMANDS.has(parsed.promoteSubcommand) &&
+      args[0] &&
+      !args[0].startsWith('-')
+    ) {
+      parsed.promoteId = args.shift();
+    }
+  } else if (!SUBCOMMAND_ONLY_COMMANDS.has(arg) && args[0] && !args[0].startsWith('-')) {
+    parsed.target = args.shift();
+    parsed.targetConsumed = true;
+  }
+}
+
 // EXTERNAL MODULE: ./src/lib/diff-processor.mjs
 var diff_processor = __nccwpck_require__(861);
 // EXTERNAL MODULE: ./src/config/artifact-resolver.mjs
@@ -84852,6 +85065,9 @@ async function runReplay(parsed, output) {
 
 
 
+
+
+
 function printHelp() {
   console.log(`Usage: river <command> <path> [options]
 
@@ -85048,32 +85264,6 @@ const EAGER_COMMANDS = new Set(
 );
 
 /**
- * Eager-branch commands that take a subcommand word and never a positional
- * path. The arms above the fall-through in the eager branch have already
- * consumed their subcommand word, so the fall-through (which reads a
- * positional `<path>`) must skip exactly these.
- */
-const SUBCOMMAND_ONLY_COMMANDS = new Set(['runs', 'suppression', 'feedback', 'promote']);
-
-/**
- * `skills` subcommands (`skills import|export|list|resolve` take options, not a
- * positional path — see `acceptsPositionalPath`).
- */
-const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
-
-/**
- * `evolve` subcommands (#1574 P1 `aggregate` / P2 `replay`, ADR-006
- * `prompt-compare` / `prompt-ab`). Matching against a known set (rather than
- * "first non-flag token") keeps `river evolve <path>` working.
- */
-const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay', 'prompt-compare', 'prompt-ab']);
-
-/**
- * `promote` subcommands that take an optional positional candidate id.
- */
-const PROMOTE_ID_SUBCOMMANDS = new Set(['approve', 'reject', 'template', 'review-effectiveness']);
-
-/**
  * Global options the shared parser handles for `evolve`. Anything else starting
  * with `-` is rejected rather than silently ignored.
  */
@@ -85117,48 +85307,6 @@ const SKILLS_LIST_SOURCES = ['rr', 'agent', 'all'];
  * list cannot drift from it.
  */
 const SUPPRESSION_FINGERPRINT_ALGOS = ['v1', 'v2'];
-
-/**
- * `river review` subcommands (#802 Phase 3), at module scope because BOTH the
- * eager branch inside `parseArgs` and `takeTrailingPositional` below need it:
- * `review` had no vocabulary at all, so a subcommand written after the options
- * was swallowed as the path (#1755).
- *
- * `SKILLS_SUBCOMMANDS` / `EVOLVE_SUBCOMMANDS` sit alongside it above. Hoisting
- * them out of `parseArgs` is a pure relocation: `takeTrailingPositional`
- * already consulted `REVIEW_SUBCOMMANDS` before the hoist, but for `evolve`
- * it only approximated the eager branch's decision with `existsSync` (#1759
- * B1). `takeTrailingPositional` now checks `EVOLVE_SUBCOMMANDS` first, the
- * same priority the eager branch uses, so `river evolve aggregate --min 2`
- * and `river evolve --min 2 aggregate` agree even when a directory named
- * `aggregate` exists in cwd.
- */
-const REVIEW_SUBCOMMANDS = new Set(['plan', 'exec', 'verify', 'route']);
-
-/**
- * `runs` subcommands, as dispatched by `runRunsCommand`
- * (`src/cli/commands/runs.mjs`): `list` / `diff` / `summary` / `digest`, with a
- * MISSING subcommand behaving as `list` (`:21` — `!parsed.runsSubcommand ||
- * parsed.runsSubcommand === 'list'`). Mirrors the vocabulary in that handler's
- * `Unknown runs subcommand: … Use: list | diff | summary | digest` message,
- * the same "mirror + pin" arrangement `SUPPRESSION_FINGERPRINT_ALGOS` uses
- * against its schema; `tests/cli-base-option-scope.test.mjs` pins the two
- * together by running the CLI, so this list cannot drift from the handler.
- *
- * Needed at parse time only so `checkCommandScopedOptions` can tell a real
- * surface from a typo'd subcommand word (see `isNamedSurface`).
- */
-const RUNS_SUBCOMMANDS = new Set(['list', 'diff', 'summary', 'digest']);
-
-/**
- * `feedback` / `suppression` accept exactly one subcommand word each, and a
- * missing one is NOT a surface — both handlers answer
- * ``only `river feedback add` is supported`` / ``only `river suppression add`
- * is supported`` (`src/cli/commands/feedback.mjs:61`,
- * `src/cli/commands/suppression.mjs:20`). Pinned by the same test.
- */
-const FEEDBACK_SUBCOMMANDS = new Set(['add']);
-const SUPPRESSION_SUBCOMMANDS = new Set(['add']);
 
 /**
  * Which subcommand words name a real surface, per command (#2065 review).
@@ -86344,92 +86492,16 @@ function parseArgs(argv) {
     // command-specific blocks, so that all five path-taking surfaces behave the
     // same (`evolve` would otherwise report it as its own unknown option).
     if (arg === '--') {
-      let terminatorError = false;
-      while (args.length) {
-        const positional = args.shift();
-        if (parsed.targetConsumed || !acceptsPositionalPath(parsed)) {
-          console.error(`Error: unexpected argument "${positional}".`);
-          usageError(parsed);
-          terminatorError = true;
-          break;
-        }
-        // The token is a path by construction, so it must BE one. Without this
-        // check `river evolve aggregate -- nosuchdir` exited 0 with an empty
-        // aggregate: `--` bypasses the eager branch's "a non-existent,
-        // non-subcommand token is a mistyped subcommand" rejection, turning a
-        // mistyped path into a silent empty result. #1746 W2 already treated
-        // "exit 0 while silently falling back" as a regression.
-        if (!(0,external_node_fs_.existsSync)(positional)) {
-          console.error(
-            `Error: "${positional}" does not exist ` +
-              '(every token after `--` is read as a path, never as an option or a subcommand).'
-          );
-          usageError(parsed);
-          terminatorError = true;
-          break;
-        }
-        takePositionalPath(parsed, positional);
-        terminatorTookPositional = true;
+      const { error, tookPositional } = consumeTerminator(parsed, args);
+      if (tookPositional) terminatorTookPositional = true;
+      if (error) {
+        usageError(parsed);
+        break;
       }
-      if (terminatorError) break;
       continue;
     }
     if (!parsed.command && EAGER_COMMANDS.has(arg)) {
-      parsed.command = arg;
-      // Check for skills subcommands (import/export/list)
-      if (arg === 'skills' && args[0] && SKILLS_SUBCOMMANDS.has(args[0])) {
-        parsed.skillsSubcommand = args.shift();
-      } else if (arg === 'evolve') {
-        if (args[0] && EVOLVE_SUBCOMMANDS.has(args[0])) {
-          parsed.evolveSubcommand = args.shift();
-        }
-        // `replay` takes NO positional: its dataset comes from --spec. Letting
-        // the first token become `parsed.target` would make the command accept
-        // and silently ignore it (`river evolve replay ./typo.json --spec x`).
-        if (parsed.evolveSubcommand !== 'replay' && args[0] && !args[0].startsWith('-')) {
-          const token = args.shift();
-          // A mistyped subcommand (`agregate`) must not be swallowed as a path
-          // and reported as an empty, successful aggregate. Anything that is
-          // neither a known subcommand nor an existing path is an error.
-          if (!parsed.evolveSubcommand && !(0,external_node_fs_.existsSync)(token)) {
-            parsed.evolveSubcommand = token; // handler rejects it with exit 1
-          } else {
-            parsed.target = token;
-            parsed.targetConsumed = true;
-          }
-        }
-        // Surplus positionals are a usage error, never silently discarded.
-        while (args[0] && !args[0].startsWith('-')) {
-          parsed.evolveExtraArgs.push(args.shift());
-        }
-      } else if (arg === 'runs' && args[0] && !args[0].startsWith('-')) {
-        parsed.runsSubcommand = args.shift(); // list | diff | summary | digest
-        // `diff` takes two or more positional run IDs, which may be written
-        // before, after, or interleaved with options (e.g. `--output json`).
-        // Collecting them eagerly here (as a fixed shift-two-then-scan) used to
-        // swallow a leading option as a run ID (#1759 B2): `runs diff --output
-        // json r1 r2` shifted "--output" into runsId1 and "json" into runsId2,
-        // then tried to open a run named "--output" and exited 1 with ENOENT.
-        // Collection now happens token-by-token below (near the promote/evolve
-        // dispatches), so options are left for the shared option handlers.
-      } else if (arg === 'suppression' && args[0] && !args[0].startsWith('-')) {
-        parsed.suppressionSubcommand = args.shift(); // add (only one for now)
-      } else if (arg === 'feedback' && args[0] && !args[0].startsWith('-')) {
-        parsed.feedbackSubcommand = args.shift(); // add (only one for now)
-      } else if (arg === 'promote' && args[0] && !args[0].startsWith('-')) {
-        parsed.promoteSubcommand = args.shift(); // propose | list | approve | reject | template | retire | review-effectiveness
-        // approve/reject/template/review-effectiveness take an optional positional candidate id.
-        if (
-          PROMOTE_ID_SUBCOMMANDS.has(parsed.promoteSubcommand) &&
-          args[0] &&
-          !args[0].startsWith('-')
-        ) {
-          parsed.promoteId = args.shift();
-        }
-      } else if (!SUBCOMMAND_ONLY_COMMANDS.has(arg) && args[0] && !args[0].startsWith('-')) {
-        parsed.target = args.shift();
-        parsed.targetConsumed = true;
-      }
+      consumeEagerCommand(parsed, arg, args);
       continue;
     }
     if (parsed.command === 'suppression') {
